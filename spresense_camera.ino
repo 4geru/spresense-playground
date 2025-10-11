@@ -3,8 +3,8 @@
 
 // --- 設定値 ---
 #define BAUD_RATE 115200 
-const char* START_MARKER = "START_JPEG";
-const char* END_MARKER = "END_JPEG";
+const char* START_MARKER = "START_YUV422";
+const char* END_MARKER = "END_YUV422";
 
 void setup() {
   Serial.begin(BAUD_RATE);
@@ -16,12 +16,12 @@ void setup() {
     while(1);
   }
 
-  // 最大解像度JPEG用設定（JPEGバッファサイズを最大に）
+  // 最大解像度RAW用設定（センサー最大解像度）
   CamErr err = theCamera.setStillPictureImageFormat(
-      1920, // 幅 (Full HD)
-      1080, // 高さ (Full HD)
-      CAM_IMAGE_PIX_FMT_JPG, // フォーマット
-      1 // jpgbufsize_divisor (最大バッファサイズ)
+      2608, // 幅 (センサー最大)
+      1960, // 高さ (センサー最大)
+      CAM_IMAGE_PIX_FMT_YUV422, // RAW YUV422フォーマット
+      1 // 予備パラメータ
   ); 
   
   if (err != CAM_ERR_SUCCESS) {
