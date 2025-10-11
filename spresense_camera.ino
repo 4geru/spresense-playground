@@ -16,14 +16,32 @@ void setup() {
     while(1);
   }
 
-  theCamera.setStillPictureImageFormat(
-      320, // 幅 (QVGA)
-      240, // 高さ (QVGA)
+  // より高解像度JPEG用設定（JPEGバッファサイズを最大に）
+  CamErr err = theCamera.setStillPictureImageFormat(
+      1280, // 幅 (HD解像度)
+      960,  // 高さ (HD解像度)
       CAM_IMAGE_PIX_FMT_JPG, // フォーマット
-      1 // 撮影枚数
+      2 // jpgbufsize_divisor (さらに大きなバッファ)
   ); 
+  
+  if (err != CAM_ERR_SUCCESS) {
+    Serial.print("Spresense: ERROR - setStillPictureImageFormat failed: ");
+    Serial.println(err);
+    Serial.println("Spresense: Trying with smaller resolution...");
+    
+    // フォールバック: より小さい解像度で再試行
+    err = theCamera.setStillPictureImageFormat(640, 480, CAM_IMAGE_PIX_FMT_JPG, 2);
+    if (err != CAM_ERR_SUCCESS) {
+      Serial.println("Spresense: ERROR - Even fallback resolution failed!");
+      while(1);
+    }
+    Serial.println("Spresense: Using fallback resolution 640x480");
+  }
 
-  Serial.println("Spresense: Camera ready. Starting capture loop...");
+  // JPEG品質を最高に設定
+  theCamera.setJPEGQuality(100); // 最高品質
+  
+  Serial.println("Spresense: Camera ready with HD quality. Starting capture loop...");
 }
 
 void loop() {
@@ -50,5 +68,5 @@ void loop() {
     Serial.println("Spresense: Failed to take picture or image not available.");
   }
 
-  delay(5000); 
+  delay(15000); // 15秒間隔（HD画像送信時間考慮） 
 }
