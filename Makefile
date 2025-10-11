@@ -18,3 +18,13 @@ setup:
 		$(VENV_DIR)\Scripts\activate && $(PIP) install -r $(REQUIREMENTS); \
 	fi
 	@echo "Setup complete!"
+
+.PHONY: uv
+uv:
+	@echo "Activating virtual environment and installing dependencies..."
+	@if [ -d ".venv" ]; then \
+		echo "Virtual environment found at .venv"; \
+		. .venv/bin/activate && uv pip install -r requirements-dev.txt && echo "Dependencies installed and virtual environment activated"; \
+	else \
+		echo "No virtual environment found at .venv"; \
+	fi
