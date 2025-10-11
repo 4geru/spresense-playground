@@ -60,8 +60,8 @@ def save_jpeg_from_spresense():
                         else:
                             jpeg_data += chunk
                     
-                    # タイムアウト対策（HD画像用に延長）
-                    if time.time() - start_time > 45:  # 45秒（HD用）
+                    # タイムアウト対策（Full HD画像用に延長）
+                    if time.time() - start_time > 60:  # 60秒（Full HD用）
                         print("❌ 受信タイムアウト。データが途切れた可能性があります。")
                         break
 
