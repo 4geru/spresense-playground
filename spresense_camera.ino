@@ -3,8 +3,8 @@
 
 // --- 設定値 ---
 #define BAUD_RATE 115200 
-const char* START_MARKER = "START_YUV422";
-const char* END_MARKER = "END_YUV422";
+const char* START_MARKER = "START_JPEG";
+const char* END_MARKER = "END_JPEG";
 
 void setup() {
   Serial.begin(BAUD_RATE);
@@ -16,40 +16,14 @@ void setup() {
     while(1);
   }
 
-  // 最大解像度RAW用設定（センサー最大解像度）
-  CamErr err = theCamera.setStillPictureImageFormat(
-      2608, // 幅 (センサー最大)
-      1960, // 高さ (センサー最大)
-      CAM_IMAGE_PIX_FMT_YUV422, // RAW YUV422フォーマット
-      1 // 予備パラメータ
+  theCamera.setStillPictureImageFormat(
+      320, // 幅 (QVGA)
+      240, // 高さ (QVGA)
+      CAM_IMAGE_PIX_FMT_JPG, // フォーマット
+      1 // 撮影枚数
   ); 
-  
-  if (err != CAM_ERR_SUCCESS) {
-    Serial.print("Spresense: ERROR - setStillPictureImageFormat failed: ");
-    Serial.println(err);
-    Serial.println("Spresense: Trying with smaller resolution...");
-    
-    // フォールバック1: HD解像度で再試行
-    Serial.println("Spresense: Trying HD fallback 1280x960...");
-    err = theCamera.setStillPictureImageFormat(1280, 960, CAM_IMAGE_PIX_FMT_JPG, 2);
-    if (err != CAM_ERR_SUCCESS) {
-      // フォールバック2: さらに小さい解像度
-      Serial.println("Spresense: Trying VGA fallback 640x480...");
-      err = theCamera.setStillPictureImageFormat(640, 480, CAM_IMAGE_PIX_FMT_JPG, 3);
-      if (err != CAM_ERR_SUCCESS) {
-        Serial.println("Spresense: ERROR - All fallback resolutions failed!");
-        while(1);
-      }
-      Serial.println("Spresense: Using VGA fallback 640x480");
-    } else {
-      Serial.println("Spresense: Using HD fallback 1280x960");
-    }
-  }
 
-  // JPEG品質を最高に設定
-  theCamera.setJPEGQuality(100); // 最高品質
-  
-  Serial.println("Spresense: Camera ready with HD quality. Starting capture loop...");
+  Serial.println("Spresense: Camera ready. Starting capture loop...");
 }
 
 void loop() {
@@ -76,5 +50,5 @@ void loop() {
     Serial.println("Spresense: Failed to take picture or image not available.");
   }
 
-  delay(20000); // 20秒間隔（Full HD大容量ファイル送信時間考慮） 
+  delay(5000); 
 }

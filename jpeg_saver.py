@@ -8,8 +8,8 @@ BAUD_RATE = 115200
 
 # SpresenseのC++コードと完全に一致させること
 # C++で Serial.println(END_MARKER) を使った場合、改行コードが末尾に付く
-START_MARKER = b'START_YUV422'
-END_MARKER = b'END_YUV422' 
+START_MARKER = b'START_JPEG'
+END_MARKER = b'END_JPEG' 
 OUTPUT_DIR = "captured_images"
 
 def save_jpeg_from_spresense():
@@ -60,14 +60,14 @@ def save_jpeg_from_spresense():
                         else:
                             jpeg_data += chunk
                     
-                    # タイムアウト対策（5MP RAWファイル用に延長）
-                    if time.time() - start_time > 120:  # 120秒（5MP RAW用）
+                    # タイムアウト対策（高解像度画像用に延長）
+                    if time.time() - start_time > 30:  # 30秒に延長
                         print("❌ 受信タイムアウト。データが途切れた可能性があります。")
                         break
 
                 if jpeg_data:
                     # 3. 受信完了とファイル保存
-                    file_name = os.path.join(OUTPUT_DIR, f"capture_{int(time.time())}.yuv")
+                    file_name = os.path.join(OUTPUT_DIR, f"capture_{int(time.time())}.jpg")
                     with open(file_name, "wb") as f:
                         f.write(jpeg_data)
                     
