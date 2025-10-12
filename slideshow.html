@@ -64,6 +64,39 @@
             z-index: 1000;
         }
         
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 255, 0, 0.9);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            z-index: 2000;
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            z-index: 2000;
+        }
+        
         .fade {
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
@@ -79,6 +112,14 @@
     <div class="error" id="error" style="display: none;">
         <p>Failed to load images from Supabase</p>
         <p>Please check your connection and configuration</p>
+    </div>
+    
+    <div class="notification" id="notification">
+        🆕 New image detected!
+    </div>
+    
+    <div class="status-indicator" id="status">
+        📸 Images: 0 | 🔄 Checking...
     </div>
     
     <div class="slideshow-container" id="slideshow" style="display: none;">
@@ -98,6 +139,8 @@
                 this.images = [];
                 this.currentIndex = 0;
                 this.slideInterval = null;
+                this.refreshInterval = null;
+                this.lastImageCount = 0;
                 this.supabaseUrl = SUPABASE_CONFIG.url;
                 this.supabaseKey = SUPABASE_CONFIG.anonKey;
                 this.bucketName = SUPABASE_CONFIG.bucketName;
@@ -123,10 +166,12 @@
                     
                     if (this.images.length > 0) {
                         console.log(`Found ${this.images.length} images`);
+                        this.lastImageCount = this.images.length;
                         // 初期画像をランダムに選択
                         this.currentIndex = Math.floor(Math.random() * this.images.length);
                         this.displaySingleImage();
                         this.startSlideshow();
+                        this.startAutoRefresh();
                         this.hideLoading();
                     } else {
                         this.showError('No images found with "original_capture" in filename');
@@ -245,9 +290,71 @@
                 scheduleNext();
             }
             
+            startAutoRefresh() {
+                console.log('🔄 Auto-refresh started: checking for new images every 30 seconds');
+                
+                this.refreshInterval = setInterval(async () => {
+                    try {
+                        console.log('🔍 Checking for new images...');
+                        await this.checkForNewImages();
+                    } catch (error) {
+                        console.error('Auto-refresh error:', error);
+                    }
+                }, 30000); // 30秒ごとにチェック
+            }
+            
+            async checkForNewImages() {
+                try {
+                    const response = await fetch(`${this.supabaseUrl}/functions/v1/get-original-images`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${this.supabaseKey}`,
+                            'apikey': this.supabaseKey,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    
+                    if (result.success && result.images) {
+                        const newImageCount = result.images.length;
+                        
+                        if (newImageCount > this.lastImageCount) {
+                            console.log(`🆕 New images detected! ${this.lastImageCount} → ${newImageCount}`);
+                            this.showNewImageNotification(newImageCount - this.lastImageCount);
+                            
+                            // 画像リストを更新
+                            this.images = result.images.map(image => ({
+                                name: image.name,
+                                url: image.url,
+                                created_at: image.created_at,
+                                size: image.size
+                            }));
+                            
+                            this.lastImageCount = newImageCount;
+                            
+                            // 新しい画像をランダムに表示
+                            this.currentIndex = Math.floor(Math.random() * this.images.length);
+                            this.displaySingleImage();
+                            this.updateStatusIndicator();
+                        } else if (newImageCount < this.lastImageCount) {
+                            console.log(`📉 Images removed: ${this.lastImageCount} → ${newImageCount}`);
+                            this.lastImageCount = newImageCount;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking for new images:', error);
+                }
+            }
+            
             hideLoading() {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('slideshow').style.display = 'block';
+                this.updateStatusIndicator();
             }
             
             showError(message) {
@@ -255,6 +362,23 @@
                 const errorDiv = document.getElementById('error');
                 errorDiv.innerHTML = `<p>${message}</p>`;
                 errorDiv.style.display = 'block';
+            }
+            
+            showNewImageNotification(newCount) {
+                const notification = document.getElementById('notification');
+                notification.innerHTML = `🆕 ${newCount} new image${newCount > 1 ? 's' : ''} detected!`;
+                notification.classList.add('show');
+                
+                // 3秒後に非表示
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+            
+            updateStatusIndicator() {
+                const status = document.getElementById('status');
+                const currentTime = new Date().toLocaleTimeString();
+                status.innerHTML = `📸 Images: ${this.images.length} | 🕒 ${currentTime}`;
             }
         }
         
