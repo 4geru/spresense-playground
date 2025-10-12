@@ -89,7 +89,7 @@
         // Supabase configuration embedded directly
         const SUPABASE_CONFIG = {
             url: 'https://fyxftmwypdfuierggfqw.supabase.co',
-            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5eGZ0bXd5cGRmdWllcmdnZnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDg3MDksImV4cCI6MjA3NTc4NDcwOX0.ntddVBznlCvmX2HebGFDkI8VpPzHHxKCmOzLXhKVZnI',
+            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5eGZ0bXd5cGRmdWllcmdnZnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyMDg3MDksImV4cCI6MjA3NTc4NDcwOX0.qS6jgQKMkw7jhic0SR9n1_KspGAe5Acc-RE0yh56euo',
             bucketName: 'line-images'
         };
 
@@ -118,16 +118,18 @@
                         return;
                     }
                     
-                    console.log('Loading images from bucket:', this.bucketName);
+                    console.log('Loading images from Edge Function');
                     await this.loadImages();
                     
                     if (this.images.length > 0) {
                         console.log(`Found ${this.images.length} images`);
-                        this.createSlides();
+                        // 初期画像をランダムに選択
+                        this.currentIndex = Math.floor(Math.random() * this.images.length);
+                        this.displaySingleImage();
                         this.startSlideshow();
                         this.hideLoading();
                     } else {
-                        this.showError('No images found with "_original_" in filename');
+                        this.showError('No images found with "original_capture" in filename');
                     }
                 } catch (error) {
                     console.error('Initialization error:', error);
@@ -137,122 +139,105 @@
             
             async loadImages() {
                 try {
-                    console.log('Fetching from:', `${this.supabaseUrl}/storage/v1/object/list/${this.bucketName}`);
+                    console.log('Fetching from Edge Function: get-original-images');
                     
-                    const response = await fetch(`${this.supabaseUrl}/storage/v1/object/list/${this.bucketName}`, {
-                        method: 'POST',
+                    const response = await fetch(`${this.supabaseUrl}/functions/v1/get-original-images`, {
+                        method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${this.supabaseKey}`,
                             'apikey': this.supabaseKey,
                             'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            limit: 1000,
-                            offset: 0,
-                            prefix: ""
-                        })
+                        }
                     });
                     
                     if (!response.ok) {
                         const errorText = await response.text();
-                        console.error('API Error Response:', errorText);
+                        console.error('Edge Function Error Response:', errorText);
                         throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
                     }
                     
-                    const files = await response.json();
-                    console.log('Raw API response:', files);
+                    const result = await response.json();
+                    console.log('Edge Function response:', result);
                     
-                    // Filter files containing "_original_" and are image files
-                    this.images = files
-                        .filter(file => 
-                            file.name.includes('_original_') && 
-                            /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name)
-                        )
-                        .map(file => ({
-                            name: file.name,
-                            url: `${this.supabaseUrl}/storage/v1/object/public/${this.bucketName}/${file.name}`
+                    if (result.success && result.images) {
+                        this.images = result.images.map(image => ({
+                            name: image.name,
+                            url: image.url,
+                            created_at: image.created_at,
+                            size: image.size
                         }));
                         
-                    console.log(`Found ${this.images.length} original images`);
-                    this.images.forEach((image, index) => {
-                        console.log(`${index + 1}. ${image.name} - ${image.url}`);
-                    });
+                        console.log(`Found ${this.images.length} original capture images`);
+                        this.images.forEach((image, index) => {
+                            console.log(`${index + 1}. ${image.name} - ${image.url}`);
+                        });
+                    } else {
+                        throw new Error(result.error || 'No images returned from Edge Function');
+                    }
                 } catch (error) {
                     console.error('Error loading images:', error);
                     throw error;
                 }
             }
             
-            createSlides() {
+            displaySingleImage() {
                 const slideshow = document.getElementById('slideshow');
                 slideshow.innerHTML = '';
                 
-                this.images.forEach((image, index) => {
-                    const slide = document.createElement('div');
-                    slide.className = 'slide fade';
-                    if (index === 0) slide.classList.add('active', 'show');
-                    
-                    const img = document.createElement('img');
-                    img.src = image.url;
-                    img.alt = image.name;
-                    img.onerror = () => {
-                        console.warn(`Failed to load image: ${image.name}`);
-                        slide.style.display = 'none';
-                    };
-                    
-                    slide.appendChild(img);
-                    slideshow.appendChild(slide);
-                });
-            }
-            
-            nextSlide() {
                 if (this.images.length === 0) return;
                 
-                const slides = document.querySelectorAll('.slide');
-                const currentSlide = slides[this.currentIndex];
+                // 現在のインデックスの画像を表示
+                const currentImage = this.images[this.currentIndex];
                 
-                // Fade out current slide
-                currentSlide.classList.remove('show');
+                const slide = document.createElement('div');
+                slide.className = 'slide fade active show';
                 
-                setTimeout(() => {
-                    currentSlide.classList.remove('active');
-                    
-                    // Move to next slide (random selection)
-                    let nextIndex;
-                    if (this.images.length > 1) {
-                        do {
-                            nextIndex = Math.floor(Math.random() * this.images.length);
-                        } while (nextIndex === this.currentIndex);
-                    } else {
-                        nextIndex = 0;
-                    }
-                    
-                    this.currentIndex = nextIndex;
-                    const nextSlide = slides[this.currentIndex];
-                    
-                    nextSlide.classList.add('active');
-                    
-                    // Fade in next slide
-                    setTimeout(() => {
-                        nextSlide.classList.add('show');
-                    }, 50);
-                    
-                }, 250);
+                const img = document.createElement('img');
+                img.src = currentImage.url;
+                img.alt = currentImage.name;
+                img.onerror = () => {
+                    console.warn(`Failed to load image: ${currentImage.name}`);
+                    this.nextImage(); // エラー時は次の画像に
+                };
+                
+                slide.appendChild(img);
+                slideshow.appendChild(slide);
+                
+                console.log(`Displaying: ${currentImage.name}`);
+            }
+            
+            nextImage() {
+                if (this.images.length === 0) return;
+                
+                // ランダムに次の画像を選択
+                let nextIndex;
+                if (this.images.length > 1) {
+                    do {
+                        nextIndex = Math.floor(Math.random() * this.images.length);
+                    } while (nextIndex === this.currentIndex);
+                } else {
+                    nextIndex = 0;
+                }
+                
+                this.currentIndex = nextIndex;
+                
+                // 新しい画像を表示
+                this.displaySingleImage();
             }
             
             startSlideshow() {
                 if (this.images.length <= 1) return;
                 
                 const getRandomInterval = () => {
-                    return Math.floor(Math.random() * 20000) + 10000; // 10-30 seconds
+                    return Math.floor(Math.random() * 1000) + 2000; // 2-3 seconds
                 };
                 
                 const scheduleNext = () => {
                     const interval = getRandomInterval();
-                    console.log(`Next slide in ${interval/1000} seconds`);
+                    console.log(`Next image in ${interval/1000} seconds`);
                     
                     this.slideInterval = setTimeout(() => {
-                        this.nextSlide();
+                        this.nextImage();
                         scheduleNext();
                     }, interval);
                 };
