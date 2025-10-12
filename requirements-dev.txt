@@ -2,3 +2,7 @@ google-genai
 python-dotenv
 google-generativeai
 pyserial
+Pillow
+line-bot-sdk
+requests
+supabase
