@@ -2,3 +2,5 @@
 /venv
 .DS_Store
 /captured_images
+/edited_images
+/__pycache__
