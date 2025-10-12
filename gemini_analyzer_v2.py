@@ -99,16 +99,13 @@ def analyze_image_with_gemini(jpeg_data: bytes):
         genai.configure(api_key=API_KEY)
         model = genai.GenerativeModel(MODEL_NAME)
 
-        # 2. 画像内容分析プロンプトを作成
+        # 2. ポーズ判定を含むプロンプトを作成
         prompt = (
-            "この画像について詳しく分析してください。\n"
-            "以下の内容を含めて答えてください：\n"
-            "1. 主な被写体は何ですか？\n"
-            "2. 背景や周囲の環境はどのようですか？\n"
-            "3. 色彩や光の状況はどうですか？\n"
-            "4. 全体的な印象や特徴を教えてください。\n"
-            "結果を以下のJSON形式で出力してください: "
-            '{"main_subject": "主な被写体", "background": "背景の説明", "lighting": "光の状況", "overall_impression": "全体的な印象"}'
+            "この画像について分析してください。\n"
+            "1. 人の顔は映っていますか？ (Yes/No)\n"
+            "2. 映っている場合、その人はカメラに向かって何かポーズ（ピースサイン、グッドサイン、ガッツポーズ）をしていますか？ (Yes/No)\n"
+            "結果を以下のJSON形式でのみ出力してください: "
+            "{'face_detected': 'Yes/No', 'is_pose': 'Yes/No'}"
         )
 
         print("🔍 Gemini APIに画像とプロンプトを送信中...")

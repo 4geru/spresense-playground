@@ -231,7 +231,7 @@ def main():
     print("=" * 50)
     
     # 変換する画像ファイルを変数で定義
-    image_path = "captured_images/capture_1760191954.jpg"
+    image_path = "captured_images/capture_1760235365.jpg"
     
     print(f"🖼️ 変換対象: {image_path}")
     
