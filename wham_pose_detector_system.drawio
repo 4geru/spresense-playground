@@ -1,0 +1,249 @@
+<mxfile host="app.diagrams.net" modified="2024-10-12T00:00:00.000Z" agent="5.0" etag="abc123" version="22.1.11" type="device">
+  <diagram name="WHAM! POSE DETECTOR System" id="system-diagram">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- Title -->
+        <mxCell id="title" value="WHAM! POSE DETECTOR - システム構成図" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontStyle=1;fontColor=#FF6B35;" vertex="1" parent="1">
+          <mxGeometry x="340" y="20" width="500" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 1: Camera Capture -->
+        <mxCell id="phase1-title" value="📸 フェーズ1: 撮影" style="text;html=1;strokeColor=none;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="80" width="150" height="30" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="spresense" value="📷 Sony Spresense&#xa;Camera Board" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#0277BD;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="130" width="110" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 2: Serial Communication -->
+        <mxCell id="phase2-title" value="🔗 フェーズ2: 通信" style="text;html=1;strokeColor=none;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="80" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="serial" value="⚡ シリアル通信&#xa;(115200bps)&#xa;JPEG転送" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="270" y="130" width="110" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="python-system" value="🐍 Python統合システム&#xa;integrated_photo_system.py" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#2E7D32;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="220" width="150" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 3: AI Analysis -->
+        <mxCell id="phase3-title" value="🤖 フェーズ3: AI分析" style="text;html=1;strokeColor=none;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="80" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gemini" value="✨ Gemini AI 2.5 Flash&#xa;人物・ポーズ検出&#xa;JSON応答" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#F57C00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="490" y="130" width="110" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="analysis-logic" value="🎯 判定ロジック&#xa;人の顔 = Yes?&#xa;ポーズ = Yes?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#C62828;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="485" y="220" width="120" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 4: Comic Conversion -->
+        <mxCell id="phase4-title" value="🎨 フェーズ4: 変換" style="text;html=1;strokeColor=none;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="670" y="80" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="comic-converter" value="💥 アメコミ風変換&#xa;・太い輪郭線&#xa;・鮮やか色彩&#xa;・効果音追加" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8EAF6;strokeColor=#3F51B5;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="690" y="130" width="110" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 5: Cloud Upload -->
+        <mxCell id="phase5-title" value="☁️ フェーズ5: アップロード" style="text;html=1;strokeColor=none;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="870" y="80" width="180" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="supabase" value="🗄️ Supabase Storage&#xa;画像アップロード&#xa;公開URL生成" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E0F2F1;strokeColor=#00695C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="890" y="130" width="120" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 6: Distribution -->
+        <mxCell id="phase6-title" value="📱 フェーズ6: 配信" style="text;html=1;strokeColor=none;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="340" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="line-bot" value="💬 LINE Bot&#xa;アメコミ画像送信&#xa;プッシュ通知" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E8;strokeColor=#388E3C;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="70" y="380" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="github-pages" value="🌐 GitHub Pages&#xa;リアルタイム&#xa;スライドショー" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="70" y="440" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 7: Backend Services -->
+        <mxCell id="phase7-title" value="⚡ バックエンド" style="text;html=1;strokeColor=none;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="340" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Edge Function -->
+        <mxCell id="edge-function" value="⚡ Supabase&#xa;Edge Function&#xa;画像リスト取得" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF8E1;strokeColor=#FF8F00;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="270" y="380" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Auto Refresh -->
+        <mxCell id="auto-refresh" value="🔄 自動更新&#xa;30秒間隔" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#C62828;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="270" y="440" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Phase 8: File Management -->
+        <mxCell id="phase8-title" value="🗂️ ファイル管理" style="text;html=1;strokeColor=none;fillColor=#FFE6CC;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="340" width="150" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="file-cleanup" value="🗑️ 自動クリーンアップ&#xa;最新10件保持" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="470" y="380" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="loop-mode" value="🔄 ループモード&#xa;連続撮影" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F1F8E9;strokeColor=#689F38;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="470" y="440" width="110" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- User -->
+        <mxCell id="user" value="👤 ユーザー&#xa;決めポーズ！" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#F57C00;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="520" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="line-user" value="📱 LINE受信&#xa;アメコミヒーロー!" style="ellipse;whiteSpace=wrap;html=1;fillColor=#C8E6C9;strokeColor=#4CAF50;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="200" y="520" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="web-user" value="💻 Web閲覧&#xa;ギャラリー" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E1BEE7;strokeColor=#9C27B0;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="330" y="520" width="100" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Flow Arrows -->
+        <mxCell id="arrow1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B35;strokeWidth=3;fillColor=#FF6B35;" edge="1" parent="1" source="spresense" target="serial">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B35;strokeWidth=3;fillColor=#FF6B35;" edge="1" parent="1" source="serial" target="python-system">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B35;strokeWidth=3;fillColor=#FF6B35;" edge="1" parent="1" source="python-system" target="gemini">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B35;strokeWidth=3;fillColor=#FF6B35;" edge="1" parent="1" source="gemini" target="analysis-logic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4CAF50;strokeWidth=3;fillColor=#4CAF50;" edge="1" parent="1" source="analysis-logic" target="comic-converter">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B35;strokeWidth=3;fillColor=#FF6B35;" edge="1" parent="1" source="comic-converter" target="supabase">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B35;strokeWidth=3;fillColor=#FF6B35;" edge="1" parent="1" source="supabase" target="line-bot">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="950" y="300" />
+              <mxPoint x="125" y="300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9C27B0;strokeWidth=3;fillColor=#9C27B0;" edge="1" parent="1" source="supabase" target="edge-function">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="950" y="320" />
+              <mxPoint x="325" y="320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9C27B0;strokeWidth=3;fillColor=#9C27B0;" edge="1" parent="1" source="edge-function" target="github-pages">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="250" y="405" />
+              <mxPoint x="200" y="405" />
+              <mxPoint x="200" y="465" />
+              <mxPoint x="180" y="465" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9C27B0;strokeWidth=2;fillColor=#9C27B0;dashed=1;" edge="1" parent="1" source="auto-refresh" target="edge-function">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="arrow11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FF6B35;strokeWidth=2;fillColor=#FF6B35;" edge="1" parent="1" source="user" target="spresense">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="120" y="510" />
+              <mxPoint x="120" y="200" />
+              <mxPoint x="125" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4CAF50;strokeWidth=2;fillColor=#4CAF50;" edge="1" parent="1" source="line-bot" target="line-user">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170" y="405" />
+              <mxPoint x="170" y="500" />
+              <mxPoint x="200" y="500" />
+              <mxPoint x="200" y="540" />
+              <mxPoint x="220" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="arrow13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9C27B0;strokeWidth=2;fillColor=#9C27B0;" edge="1" parent="1" source="github-pages" target="web-user">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="490" />
+              <mxPoint x="200" y="500" />
+              <mxPoint x="330" y="500" />
+              <mxPoint x="330" y="540" />
+              <mxPoint x="350" y="540" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Skip Arrow -->
+        <mxCell id="skip-arrow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#F44336;strokeWidth=2;fillColor=#F44336;dashed=1;" edge="1" parent="1" source="analysis-logic" target="python-system">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="420" y="260" />
+              <mxPoint x="420" y="245" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Labels -->
+        <mxCell id="yes-label" value="YES✨" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#4CAF50;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="610" y="180" width="40" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="no-label" value="NO❌&#xa;スキップ" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=9;fontColor=#F44336;" vertex="1" parent="1">
+          <mxGeometry x="420" y="280" width="50" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="🎯 WHAM効果音的自動化パイプライン" style="text;html=1;strokeColor=#FF6B35;fillColor=#FFF3E0;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="380" width="300" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Technology Stack -->
+        <mxCell id="tech-stack" value="🛠️ 技術スタック&#xa;• Sony Spresense + Camera&#xa;• Python + Serial通信&#xa;• Gemini AI 2.5 Flash&#xa;• Supabase (Storage + Edge Functions)&#xa;• LINE Bot API&#xa;• GitHub Pages + Actions" style="text;html=1;strokeColor=#37474F;fillColor=#ECEFF1;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="650" y="420" width="300" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Processing Stats -->
+        <mxCell id="stats" value="⚡ 処理統計&#xa;• 撮影〜分析: 5-15秒&#xa;• アメコミ変換: 10-30秒&#xa;• アップロード〜配信: 2-5秒&#xa;• 合計: 約20-50秒/枚" style="text;html=1;strokeColor=#2E7D32;fillColor=#E8F5E8;align=left;verticalAlign=top;whiteSpace=wrap;rounded=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="650" y="530" width="300" height="80" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
