@@ -4,3 +4,5 @@
 /captured_images
 /edited_images
 /__pycache__
+/supabase/.temp
+/supabase/curl.sh
