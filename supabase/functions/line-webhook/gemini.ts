@@ -33,7 +33,7 @@ export async function analyzePersonAndPose(
 ): Promise<AnalysisResult | null> {
   try {
     const genAI = createGeminiClient(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `この画像について分析してください。
 1. 人の顔は映っていますか？ (Yes/No)
@@ -113,8 +113,17 @@ export async function analyzePersonAndPose(
       console.log(`🔧 フォールバック結果: ${JSON.stringify(fallbackResult)}`);
       return fallbackResult;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Gemini API通信エラー:", error);
+
+    // レート制限エラーの場合は特別な処理
+    if (error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("Too Many Requests")) {
+      console.error("⚠️ Gemini APIレート制限に達しました");
+      console.error("💡 1-2分待ってから再試行してください");
+      // エラーオブジェクトにレート制限フラグを追加
+      throw { ...error, isRateLimit: true };
+    }
+
     return null;
   }
 }
@@ -165,7 +174,7 @@ Combine these elements to not just process the photo, but to recreate the visual
 }
 
 /**
- * アメコミ風画像変換を実行
+ * アメコミ風画像変換を実行（REST API直接呼び出し）
  *
  * @param imageData - 画像のバイナリデータ（base64エンコード済み）
  * @param apiKey - Gemini API Key
@@ -178,59 +187,123 @@ export async function convertToComicStyle(
   mimeType: string = "image/jpeg"
 ): Promise<string | null> {
   try {
-    const genAI = createGeminiClient(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
-    });
-
     const comicPrompt = getComicStylePrompt();
 
     console.log("🎨 アメコミ風変換開始...");
-    console.log("⏳ Gemini APIに送信中...");
+    console.log("⏳ Gemini REST APIに送信中...");
+    console.log("📝 使用モデル: gemini-2.0-flash-exp");
 
     const startTime = Date.now();
 
-    const result = await model.generateContent([
-      `Edit this image: ${comicPrompt}`,
+    // REST API直接呼び出し
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
       {
-        inlineData: {
-          mimeType,
-          data: imageData,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
         },
-      },
-    ]);
-
-    const response = await result.response;
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `Edit this image: ${comicPrompt}`,
+                },
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: imageData,
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            responseModalities: ["Text", "Image"],
+            temperature: 0.7,
+          },
+        }),
+      }
+    );
 
     const endTime = Date.now();
     console.log(`✨ レスポンス受信完了 (処理時間: ${(endTime - startTime) / 1000}秒)`);
 
-    // 画像データを抽出
-    // Gemini APIの応答から画像データを取得
-    // Note: Gemini 2.0 Flash の画像生成APIの応答形式に応じて調整が必要
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ API呼び出し失敗: ${response.status} ${response.statusText}`);
+      console.error(`エラー詳細: ${errorText}`);
 
-    // 現時点では、Gemini APIの画像編集機能の応答形式を確認する必要があります
-    // 仮実装：最初のパートから画像データを取得
-    const candidates = response.candidates;
+      // レート制限エラーの場合
+      if (response.status === 429) {
+        console.error("⚠️ Gemini APIレート制限に達しました");
+        console.error("💡 1-2分待ってから再試行してください");
+        throw { status: 429, isRateLimit: true, message: errorText };
+      }
+
+      return null;
+    }
+
+    const data = await response.json();
+
+    // デバッグ: 応答全体をログ出力
+    console.log("🔍 Gemini API応答の詳細:");
+    console.log(`   - candidates存在: ${!!data.candidates}`);
+    console.log(`   - candidates数: ${data.candidates?.length || 0}`);
+
+    try {
+      const responseJson = JSON.stringify(data, null, 2);
+      console.log(`   - 応答全体（最初の500文字）: ${responseJson.substring(0, 500)}`);
+    } catch (e) {
+      console.log(`   - JSON変換失敗: ${e}`);
+    }
+
+    // 画像データを抽出
+    const candidates = data.candidates;
     if (!candidates || candidates.length === 0) {
       console.error("❌ 応答にcandidatesがありません");
       return null;
     }
 
     const parts = candidates[0].content.parts;
-    for (const part of parts) {
-      // inlineDataが含まれている場合
-      if ('inlineData' in part && part.inlineData) {
+    console.log(`   - parts数: ${parts.length}`);
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      console.log(`   - part[${i}]のキー: ${Object.keys(part).join(", ")}`);
+
+      // inlineDataが含まれている場合（REST APIではcamelCase）
+      if ("inlineData" in part && part.inlineData) {
         console.log("💾 編集画像データ取得完了");
         return part.inlineData.data;
+      }
+      // 念のためsnake_caseもチェック
+      if ("inline_data" in part && part.inline_data) {
+        console.log("💾 編集画像データ取得完了");
+        return part.inline_data.data;
       }
     }
 
     console.error("⚠️ 編集画像が生成されませんでした");
+    console.error("💡 応答にinline_dataが含まれていません");
     return null;
-
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ アメコミ風変換エラー:", error);
+
+    // レート制限エラーの場合は特別な処理
+    if (
+      error?.status === 429 ||
+      error?.isRateLimit ||
+      error?.message?.includes("429") ||
+      error?.message?.includes("Too Many Requests")
+    ) {
+      console.error("⚠️ Gemini APIレート制限に達しました");
+      console.error("💡 1-2分待ってから再試行してください");
+      throw { ...error, isRateLimit: true };
+    }
+
     return null;
   }
 }

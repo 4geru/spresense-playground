@@ -29,7 +29,7 @@ import {
   convertToComicStyle,
 } from "./gemini.ts";
 
-import { uploadBothImages, uploadOriginalOnly } from "./storage.ts";
+import { uploadImage, uploadOriginalOnly } from "./storage.ts";
 
 // 環境変数の型定義
 interface EnvVars {
@@ -37,7 +37,7 @@ interface EnvVars {
   LINE_CHANNEL_SECRET: string;
   LINE_CHANNEL_ACCESS_TOKEN: string;
   SUPABASE_URL: string;
-  SUPABASE_ANON_KEY: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
   BUCKET_NAME: string;
 }
 
@@ -50,7 +50,7 @@ function getEnvVars(): EnvVars | null {
     "LINE_CHANNEL_SECRET",
     "LINE_CHANNEL_ACCESS_TOKEN",
     "SUPABASE_URL",
-    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
     "BUCKET_NAME",
   ];
 
@@ -73,7 +73,7 @@ function getEnvVars(): EnvVars | null {
     LINE_CHANNEL_SECRET: Deno.env.get("LINE_CHANNEL_SECRET")!,
     LINE_CHANNEL_ACCESS_TOKEN: Deno.env.get("LINE_CHANNEL_ACCESS_TOKEN")!,
     SUPABASE_URL: Deno.env.get("SUPABASE_URL")!,
-    SUPABASE_ANON_KEY: Deno.env.get("SUPABASE_ANON_KEY")!,
+    SUPABASE_SERVICE_ROLE_KEY: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     BUCKET_NAME: Deno.env.get("BUCKET_NAME")!,
   };
 }
@@ -123,11 +123,11 @@ async function processImageMessage(
     const lineClient = createLineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
 
     // [1] 画像ダウンロード
-    console.log("=" * 60);
+    console.log("=".repeat(60));
     console.log("📥 画像ダウンロードフェーズ");
-    console.log("=" * 60);
+    console.log("=".repeat(60));
 
-    const imageContent = await downloadImageContent(lineClient, messageId);
+    const imageContent = await downloadImageContent(messageId, env.LINE_CHANNEL_ACCESS_TOKEN);
 
     if (!imageContent) {
       console.error("❌ 画像ダウンロード失敗");
@@ -137,16 +137,48 @@ async function processImageMessage(
 
     const { data: imageData, mimeType } = imageContent;
 
-    // [2] Gemini AI分析（人・ポーズ判定）
-    console.log("\n" + "=" * 60);
-    console.log("🧠 AI画像分析フェーズ");
-    console.log("=" * 60);
+    // [2] Supabase Storageにオリジナル画像を保存
+    console.log("\n" + "=".repeat(60));
+    console.log("💾 オリジナル画像保存フェーズ");
+    console.log("=".repeat(60));
 
-    const analysisResult = await analyzePersonAndPose(
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+
+    const originalUrl = await uploadOriginalOnly(
+      supabase,
+      env.BUCKET_NAME,
       imageData,
-      env.GEMINI_API_KEY,
       mimeType
     );
+
+    if (!originalUrl) {
+      console.error("❌ オリジナル画像の保存失敗");
+      await sendErrorMessage(lineClient, replyToken);
+      return;
+    }
+
+    console.log(`✅ オリジナル画像保存完了: ${originalUrl}`);
+
+    // [3] Gemini AI分析（人・ポーズ判定）
+    console.log("\n" + "=".repeat(60));
+    console.log("🧠 AI画像分析フェーズ");
+    console.log("=".repeat(60));
+
+    let analysisResult;
+    try {
+      analysisResult = await analyzePersonAndPose(
+        imageData,
+        env.GEMINI_API_KEY,
+        mimeType
+      );
+    } catch (error: any) {
+      if (error?.isRateLimit) {
+        console.error("❌ AI分析失敗: レート制限");
+        await sendErrorMessage(lineClient, replyToken, "rate_limit");
+        return;
+      }
+      throw error;
+    }
 
     if (!analysisResult) {
       console.error("❌ AI分析失敗");
@@ -154,27 +186,17 @@ async function processImageMessage(
       return;
     }
 
-    // [3] 条件判定
-    console.log("\n" + "=" * 60);
+    // [4] 条件判定
+    console.log("\n" + "=".repeat(60));
     console.log("🎯 条件判定フェーズ");
-    console.log("=" * 60);
+    console.log("=".repeat(60));
 
     const convertNeeded = shouldConvertToComic(analysisResult);
 
     if (!convertNeeded) {
-      // 条件不一致: オリジナル画像のみ保存して終了
+      // 条件不一致: 既にオリジナル画像は保存済みなので終了
       console.log("⏭️ アメコミ風変換をスキップ");
-
-      // Supabaseクライアント作成
-      const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-
-      // オリジナル画像のみアップロード
-      await uploadOriginalOnly(
-        supabase,
-        env.BUCKET_NAME,
-        imageData,
-        mimeType
-      );
+      console.log("📁 オリジナル画像は既に保存済み");
 
       // 条件不一致メッセージを返信
       await sendConditionNotMetMessage(
@@ -187,16 +209,26 @@ async function processImageMessage(
       return;
     }
 
-    // [4] アメコミ風変換（条件マッチ時）
-    console.log("\n" + "=" * 60);
+    // [5] アメコミ風変換（条件マッチ時）
+    console.log("\n" + "=".repeat(60));
     console.log("🎨 アメコミ風変換フェーズ");
-    console.log("=" * 60);
+    console.log("=".repeat(60));
 
-    const comicImageData = await convertToComicStyle(
-      imageData,
-      env.GEMINI_API_KEY,
-      mimeType
-    );
+    let comicImageData;
+    try {
+      comicImageData = await convertToComicStyle(
+        imageData,
+        env.GEMINI_API_KEY,
+        mimeType
+      );
+    } catch (error: any) {
+      if (error?.isRateLimit) {
+        console.error("❌ アメコミ風変換失敗: レート制限");
+        await sendErrorMessage(lineClient, replyToken, "rate_limit");
+        return;
+      }
+      throw error;
+    }
 
     if (!comicImageData) {
       console.error("❌ アメコミ風変換失敗");
@@ -206,33 +238,31 @@ async function processImageMessage(
 
     console.log("✅ アメコミ風変換完了");
 
-    // [5] Supabase Storageアップロード
-    console.log("\n" + "=" * 60);
-    console.log("📤 Supabase Storage アップロードフェーズ");
-    console.log("=" * 60);
+    // [6] アメコミ風画像をStorageにアップロード
+    console.log("\n" + "=".repeat(60));
+    console.log("📤 アメコミ風画像アップロードフェーズ");
+    console.log("=".repeat(60));
 
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-
-    const uploadResult = await uploadBothImages(
+    const comicUrl = await uploadImage(
       supabase,
       env.BUCKET_NAME,
-      imageData,
       comicImageData,
-      mimeType
+      "image/png",
+      "comic"
     );
 
-    if (!uploadResult) {
-      console.error("❌ 画像アップロード失敗");
+    if (!comicUrl) {
+      console.error("❌ アメコミ風画像のアップロード失敗");
       await sendErrorMessage(lineClient, replyToken);
       return;
     }
 
-    const { originalUrl, comicUrl } = uploadResult;
+    console.log(`✅ アメコミ風画像保存完了: ${comicUrl}`);
 
-    // [6] LINE Reply APIで返信
-    console.log("\n" + "=" * 60);
+    // [7] LINE Reply APIで返信
+    console.log("\n" + "=".repeat(60));
     console.log("📤 LINE Reply API 送信フェーズ");
-    console.log("=" * 60);
+    console.log("=".repeat(60));
 
     const replySuccess = await sendComicConversionResult(
       lineClient,
@@ -242,9 +272,9 @@ async function processImageMessage(
     );
 
     if (replySuccess) {
-      console.log("\n" + "=" * 60);
+      console.log("\n" + "=".repeat(60));
       console.log("🎉 処理完了: アメコミ風画像が送信されました！");
-      console.log("=" * 60);
+      console.log("=".repeat(60));
     } else {
       console.error("❌ Reply API送信失敗");
     }

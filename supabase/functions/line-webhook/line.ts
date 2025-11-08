@@ -79,42 +79,38 @@ export function findImageMessageEvent(
 /**
  * LINE APIから画像コンテンツをダウンロード
  *
- * @param client - LINE Client
  * @param messageId - メッセージID
+ * @param accessToken - LINEアクセストークン
  * @returns 画像データ（base64エンコード済み）とMIMEタイプ
  */
 export async function downloadImageContent(
-  client: Client,
-  messageId: string
+  messageId: string,
+  accessToken: string
 ): Promise<{ data: string; mimeType: string } | null> {
   try {
     console.log(`📥 画像コンテンツをダウンロード中... (messageId: ${messageId})`);
 
-    const stream = await client.getMessageContent(messageId);
-    const chunks: Uint8Array[] = [];
+    // 直接fetch APIで画像を取得（Deno環境用）
+    const response = await fetch(
+      `https://api-data.line.me/v2/bot/message/${messageId}/content`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-    // ReadableStreamからデータを読み取る
-    const reader = stream.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) chunks.push(value);
+    if (!response.ok) {
+      console.error(`❌ 画像ダウンロード失敗: ${response.status} ${response.statusText}`);
+      return null;
     }
 
-    // Uint8Array を結合
-    const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-    const uint8Array = new Uint8Array(totalLength);
-    let offset = 0;
-    for (const chunk of chunks) {
-      uint8Array.set(chunk, offset);
-      offset += chunk.length;
-    }
+    const mimeType = response.headers.get("content-type") || "image/jpeg";
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
 
     // Base64エンコード
     const base64 = btoa(String.fromCharCode(...uint8Array));
-
-    // MIMEタイプは画像として扱う（LINEは通常JPEG）
-    const mimeType = "image/jpeg";
 
     console.log(`✅ 画像ダウンロード完了 (サイズ: ${uint8Array.length} bytes, MIME: ${mimeType})`);
 
@@ -262,18 +258,30 @@ export async function sendConditionNotMetMessage(
  *
  * @param client - LINE Client
  * @param replyToken - リプライトークン
+ * @param errorType - エラータイプ（オプション）
  */
 export async function sendErrorMessage(
   client: Client,
-  replyToken: string
+  replyToken: string,
+  errorType?: string
 ): Promise<void> {
   try {
-    const message: TextMessage = {
+    let message = "❌ 画像処理中にエラーが発生しました。\n";
+
+    if (errorType === "rate_limit") {
+      message = "⏰ 現在、AI処理のリクエストが集中しています。\n" +
+                "少し時間をおいてから（1-2分後）もう一度お試しください。\n\n" +
+                "💡 Gemini APIのレート制限に達しています。";
+    } else {
+      message += "もう一度お試しください。";
+    }
+
+    const textMessage: TextMessage = {
       type: "text",
-      text: "❌ 画像処理中にエラーが発生しました。\nもう一度お試しください。",
+      text: message,
     };
 
-    await client.replyMessage(replyToken, message);
+    await client.replyMessage(replyToken, textMessage);
     console.log("⚠️ エラーメッセージ送信完了");
   } catch (error) {
     console.error("❌ エラーメッセージ送信も失敗:", error);
