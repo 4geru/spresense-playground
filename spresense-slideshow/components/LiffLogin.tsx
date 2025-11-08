@@ -1,6 +1,6 @@
 'use client';
 
-import { useLiff } from '@/hooks/useLiff';
+import { useLiff } from '@/contexts/LiffContext';
 
 interface LiffLoginProps {
   onLoginSuccess?: () => void;

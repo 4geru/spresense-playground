@@ -8,19 +8,21 @@ import { fetchImages } from '@/lib/supabase';
 import { generateHashId } from '@/lib/utils';
 import { ImageWithHash } from '@/lib/types';
 import LiffLogin from '@/components/LiffLogin';
-import { useLiff } from '@/hooks/useLiff';
+import { useLiff } from '@/contexts/LiffContext';
 
 export default function SlideDetailPage() {
   const params = useParams();
   const router = useRouter();
   const fileId = params.file_id as string;
 
-  const { isLoggedIn, profile, isLiffReady } = useLiff();
+  const { isLoggedIn, profile, isLiffReady, error: liffError, login, shareTargetPicker, isInClient } = useLiff();
   const [images, setImages] = useState<ImageWithHash[]>([]);
   const [currentImage, setCurrentImage] = useState<ImageWithHash | null>(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     async function loadImages() {
@@ -53,6 +55,13 @@ export default function SlideDetailPage() {
 
     loadImages();
   }, [fileId]);
+
+  // クライアントサイドでのみデバッグ表示を有効化
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      setShowDebug(true);
+    }
+  }, []);
 
   const goToPrevious = () => {
     if (currentIndex > 0) {
@@ -87,17 +96,19 @@ export default function SlideDetailPage() {
   if (loading || !isLiffReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
-        <div className="text-white text-2xl">Loading...</div>
-      </div>
-    );
-  }
-
-  // LIFF login required
-  if (!isLoggedIn) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black p-4">
-        <div className="max-w-md w-full">
-          <LiffLogin showProfile={false} />
+        <div className="text-center">
+          <div className="text-white text-2xl mb-4">Loading...</div>
+          {liffError && (
+            <div className="text-red-400 text-sm max-w-md mx-auto p-4 bg-red-900/20 rounded">
+              <p className="font-bold mb-2">LIFF Error:</p>
+              <p>{liffError}</p>
+            </div>
+          )}
+          {!loading && !isLiffReady && !liffError && (
+            <div className="text-gray-400 text-sm mt-4">
+              Initializing LIFF... Please wait.
+            </div>
+          )}
         </div>
       </div>
     );
@@ -116,20 +127,129 @@ export default function SlideDetailPage() {
     );
   }
 
+  const handleShare = async () => {
+    if (!isLoggedIn) {
+      alert('Please login first');
+      return;
+    }
+
+    setIsSharing(true);
+    try {
+      const botId = process.env.NEXT_PUBLIC_LINE_BOT_ID || '@YOUR_BOT_ID';
+      const addFriendUrl = `https://line.me/R/ti/p/${botId}`;
+      const senderName = profile?.displayName || 'あなた';
+
+      await shareTargetPicker([
+        // 1. 画像メッセージ
+        {
+          type: 'image',
+          originalContentUrl: currentImage.url,
+          previewImageUrl: currentImage.url,
+        },
+        // 2. FlexMessage（アプリ説明 + 友達追加）
+        {
+          type: 'flex',
+          altText: `${senderName}さんから画像を受け取りました - Boom!ヒーロー!!`,
+          contents: {
+            type: 'bubble',
+            hero: {
+              type: 'image',
+              url: `${window.location.origin}/boom-hero-intro.jpg`,
+              size: 'full',
+              aspectMode: 'cover',
+              aspectRatio: '5:2',
+            },
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              contents: [
+                // 1. 画像を受け取りました
+                {
+                  type: 'text',
+                  text: `${senderName}さんから画像を受け取りました`,
+                  size: 'md',
+                  color: '#06C755',
+                  weight: 'bold',
+                  wrap: true,
+                },
+                // 2. Bot の説明
+                {
+                  type: 'box',
+                  layout: 'vertical',
+                  margin: 'lg',
+                  spacing: 'sm',
+                  contents: [
+                    {
+                      type: 'text',
+                      text: '📸 写真を送るだけで',
+                      color: '#aaaaaa',
+                      size: 'sm',
+                      wrap: true,
+                      margin: 'md',
+                    },
+                    {
+                      type: 'text',
+                      text: '🎨 AIがアメコミ風に変換',
+                      color: '#aaaaaa',
+                      size: 'sm',
+                      wrap: true,
+                    }
+                  ],
+                },
+                // 3. セパレーター
+                {
+                  type: 'separator',
+                  margin: 'lg',
+                },
+                // 4. Bot の追加ボタン
+                {
+                  type: 'button',
+                  style: 'primary',
+                  height: 'sm',
+                  action: {
+                    type: 'uri',
+                    label: '友達追加して使ってみる',
+                    uri: addFriendUrl,
+                  },
+                  color: '#06C755',
+                  margin: 'lg',
+                },
+              ],
+              backgroundColor: '#16213e',
+              paddingAll: 'lg',
+            },
+            styles: {
+              body: {
+                backgroundColor: '#16213e',
+              },
+            },
+          },
+        },
+      ]);
+    } catch (err) {
+      console.error('Share failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Share failed';
+      alert(errorMessage);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   return (
     <div className="relative w-screen h-screen bg-black">
       {/* ヘッダー */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-black bg-opacity-70 text-white p-4">
         <div className="flex justify-between items-center">
-          <Link href="/slides" className="hover:text-gray-300 transition">
-            ← Back to Gallery
+          <Link href="/slides" className="hover:text-gray-300 transition text-sm">
+            ← Back
           </Link>
           <div className="text-sm">
             {currentIndex + 1} / {images.length}
           </div>
-          <div className="flex items-center gap-4">
-            {profile && (
-              <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {isLoggedIn && profile ? (
+              <>
+                <span className="text-sm hidden sm:block">{profile.displayName}</span>
                 {profile.pictureUrl && (
                   <img
                     src={profile.pictureUrl}
@@ -137,28 +257,27 @@ export default function SlideDetailPage() {
                     className="w-8 h-8 rounded-full"
                   />
                 )}
-                <span className="text-sm hidden md:block">{profile.displayName}</span>
-              </div>
+              </>
+            ) : (
+              <button
+                onClick={login}
+                className="bg-[#06C755] hover:bg-[#05b34c] text-white px-4 py-2 rounded text-sm transition"
+              >
+                Login
+              </button>
             )}
-            <Link href="/" className="hover:text-gray-300 transition">
-              Slideshow
-            </Link>
           </div>
         </div>
       </div>
 
       {/* メイン画像 */}
-      <div className="w-full h-full flex items-center justify-center pt-16 pb-24">
-        <div className="relative w-full h-full">
-          <Image
-            src={currentImage.url}
-            alt={currentImage.name}
-            fill
-            className="object-contain"
-            priority
-            unoptimized
-          />
-        </div>
+      <div className="w-full min-h-screen flex items-start justify-center pt-16 pb-24 overflow-y-auto">
+        <img
+          src={currentImage.url}
+          alt={currentImage.name}
+          className="w-full h-auto"
+          style={{ maxWidth: '100%' }}
+        />
       </div>
 
       {/* ナビゲーションボタン */}
@@ -188,16 +307,43 @@ export default function SlideDetailPage() {
 
       {/* フッター */}
       <div className="fixed bottom-0 left-0 right-0 z-10 bg-black bg-opacity-70 text-white p-4">
-        <div className="text-sm truncate">{currentImage.name}</div>
-        <div className="text-xs text-gray-400 mt-1">
-          {new Date(currentImage.created_at).toLocaleString()} · {(currentImage.size / 1024).toFixed(2)} KB
+        <div className="flex justify-between items-center gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm truncate">{currentImage.name}</div>
+            <div className="text-xs text-gray-400 mt-1">
+              {new Date(currentImage.created_at).toLocaleString()} · {(currentImage.size / 1024).toFixed(2)} KB
+            </div>
+          </div>
+          {isLoggedIn && (
+            <button
+              onClick={handleShare}
+              disabled={isSharing}
+              className="bg-[#06C755] hover:bg-[#05b34c] disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm transition flex items-center gap-2 whitespace-nowrap"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              {isSharing ? 'Sharing...' : 'Share'}
+            </button>
+          )}
         </div>
       </div>
 
       {/* キーボードヒント */}
-      <div className="fixed bottom-20 right-4 text-gray-400 text-xs">
+      <div className="fixed bottom-24 right-4 text-gray-400 text-xs hidden md:block">
         ← → to navigate · ESC to close
       </div>
+
+      {/* デバッグ情報 (開発環境のみ) */}
+      {showDebug && (
+        <div className="fixed top-20 right-4 bg-gray-900/90 text-white text-xs p-3 rounded max-w-xs z-50">
+          <div className="font-bold mb-2">LIFF Debug</div>
+          <div>isInClient: {isInClient ? '✅ Yes' : '❌ No'}</div>
+          <div>isLoggedIn: {isLoggedIn ? '✅ Yes' : '❌ No'}</div>
+          <div>isLiffReady: {isLiffReady ? '✅ Yes' : '❌ No'}</div>
+          {liffError && <div className="text-red-400 mt-2">Error: {liffError}</div>}
+        </div>
+      )}
     </div>
   );
 }
