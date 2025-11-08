@@ -233,7 +233,14 @@ export async function sendEditingMessage(
       text: "🎨 画像を編集中です...\nしばらくお待ちください",
     };
 
-    await client.replyMessage(replyToken, message);
+    await client.replyMessage(replyToken, [
+      {
+        type: "sticker",
+        packageId: "11537",
+        stickerId: "52002746",
+      },
+      message
+    ]);
     console.log("✅ 編集中メッセージ送信成功");
     return true;
   } catch (error) {
