@@ -2,154 +2,15 @@
  * Gemini API処理モジュール
  *
  * 機能:
- * - 人・ポーズ判定
  * - アメコミ風画像変換
  */
 
 import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.21.0";
 
-// 人・ポーズ判定の結果型
-export interface AnalysisResult {
-  face_detected: "Yes" | "No";
-  is_pose: "Yes" | "No";
-}
 
 // Geminiクライアントの初期化
 export function createGeminiClient(apiKey: string) {
   return new GoogleGenerativeAI(apiKey);
-}
-
-/**
- * 人・ポーズ判定を実行
- *
- * @param imageData - 画像のバイナリデータ（base64エンコード済み）
- * @param apiKey - Gemini API Key
- * @returns 判定結果 {face_detected: "Yes/No", is_pose: "Yes/No"}
- */
-export async function analyzePersonAndPose(
-  imageData: string,
-  apiKey: string,
-  mimeType: string = "image/jpeg"
-): Promise<AnalysisResult | null> {
-  try {
-    const genAI = createGeminiClient(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const prompt = `この画像について分析してください。
-1. 人の顔は映っていますか？ (Yes/No)
-2. 映っている場合、その人はカメラに向かって何かポーズ（ピースサイン、グッドサイン、ガッツポーズ）をしていますか？ (Yes/No)
-結果を以下のJSON形式でのみ出力してください: {"face_detected": "Yes/No", "is_pose": "Yes/No"}`;
-
-    console.log("🔍 Gemini AIで人・ポーズ判定中...");
-    const startTime = Date.now();
-
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          mimeType,
-          data: imageData,
-        },
-      },
-    ]);
-
-    const response = await result.response;
-    const text = response.text();
-
-    const endTime = Date.now();
-    console.log(`⏱️ AI分析完了 (処理時間: ${(endTime - startTime) / 1000}秒)`);
-    console.log(`🤖 AI応答: ${text}`);
-
-    // JSON解析（Markdownコードブロック対応）
-    let cleanedText = text.trim();
-
-    // Markdownコードブロックを除去
-    if (cleanedText.startsWith('```')) {
-      const lines = cleanedText.split('\n');
-      const jsonLines: string[] = [];
-      let inCodeBlock = false;
-
-      for (const line of lines) {
-        if (line.startsWith('```')) {
-          inCodeBlock = !inCodeBlock;
-          continue;
-        }
-        if (inCodeBlock || (!inCodeBlock && !line.startsWith('```'))) {
-          jsonLines.push(line);
-        }
-      }
-
-      cleanedText = jsonLines.join('\n').trim();
-    }
-
-    // シングルクォートをダブルクォートに変換
-    if (cleanedText.startsWith("{'") && cleanedText.endsWith("'}")) {
-      cleanedText = cleanedText.replace(/'/g, '"');
-    }
-
-    console.log(`🔧 解析用テキスト: ${cleanedText}`);
-
-    try {
-      const analysisResult: AnalysisResult = JSON.parse(cleanedText);
-
-      console.log(`👁️  人の顔: ${analysisResult.face_detected}`);
-      console.log(`🤲 ポーズ: ${analysisResult.is_pose}`);
-
-      return analysisResult;
-    } catch (jsonError) {
-      console.error("❌ JSON解析エラー:", jsonError);
-      console.log("🔄 フォールバック解析を試行...");
-
-      // フォールバック: テキストから直接パース
-      const lowerText = text.toLowerCase();
-      const faceDetected = lowerText.includes('face_detected') && lowerText.includes('yes') ? 'Yes' : 'No';
-      const isPose = lowerText.includes('is_pose') && lowerText.includes('yes') ? 'Yes' : 'No';
-
-      const fallbackResult: AnalysisResult = {
-        face_detected: faceDetected as "Yes" | "No",
-        is_pose: isPose as "Yes" | "No",
-      };
-
-      console.log(`🔧 フォールバック結果: ${JSON.stringify(fallbackResult)}`);
-      return fallbackResult;
-    }
-  } catch (error: any) {
-    console.error("❌ Gemini API通信エラー:", error);
-
-    // レート制限エラーの場合は特別な処理
-    if (error?.status === 429 || error?.message?.includes("429") || error?.message?.includes("Too Many Requests")) {
-      console.error("⚠️ Gemini APIレート制限に達しました");
-      console.error("💡 1-2分待ってから再試行してください");
-      // エラーオブジェクトにレート制限フラグを追加
-      throw { ...error, isRateLimit: true };
-    }
-
-    return null;
-  }
-}
-
-/**
- * アメコミ風変換を実行するか判定
- *
- * @param analysis - 分析結果
- * @returns 変換すべきかどうか
- */
-export function shouldConvertToComic(analysis: AnalysisResult | null): boolean {
-  if (!analysis) return false;
-
-  const shouldConvert =
-    analysis.face_detected.toLowerCase() === 'yes' &&
-    analysis.is_pose.toLowerCase() === 'yes';
-
-  if (shouldConvert) {
-    console.log("✅ 🤖🤖🤖 条件マッチ: 人がいてポーズをしている → アメコミ風変換を実行 🤖🤖🤖");
-  } else {
-    console.log("❌ 条件不一致: アメコミ風変換をスキップ");
-    console.log(`   - 人の顔: ${analysis.face_detected}`);
-    console.log(`   - ポーズ: ${analysis.is_pose}`);
-  }
-
-  return shouldConvert;
 }
 
 /**

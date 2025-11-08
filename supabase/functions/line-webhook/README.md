@@ -245,51 +245,11 @@ Supabaseダッシュボードでログを確認:
 2. Edge Functions > line-webhook を選択
 3. Logs タブを開く
 
-## トラブルシューティング
-
-### 署名検証エラー (401 Invalid signature)
-
-**原因**: `LINE_CHANNEL_SECRET` が正しく設定されていない
-
-**解決策**:
-1. LINE Developer Consoleで Channel secret を確認
-2. `.env.local` または Supabaseダッシュボードで正しい値を設定
-3. 再起動/再デプロイ
-
-### 画像ダウンロード失敗
-
-**原因**: `LINE_CHANNEL_ACCESS_TOKEN` が無効
-
-**解決策**:
-1. LINE Developer Consoleで Channel access token を再発行
-2. `.env.local` または Supabaseダッシュボードで更新
-3. 再起動/再デプロイ
-
-### AI分析失敗
-
-**原因**: `GEMINI_API_KEY` が無効または上限到達
-
-**解決策**:
-1. Gemini API Keyが有効か確認
-2. API使用量を確認（上限チェック）
-3. 必要に応じて新しいAPI Keyを発行
-
-### Storage アップロード失敗
-
-**原因**: バケットが存在しないまたはアクセス権限不足
-
-**解決策**:
-1. Supabaseダッシュボードで `line-images` バケットが存在するか確認
-2. バケットが Public に設定されているか確認
-3. `SUPABASE_ANON_KEY` が正しいか確認
-
 ## モジュール詳細
 
 ### gemini.ts
 
-- `analyzePersonAndPose()`: 人・ポーズ判定
 - `convertToComicStyle()`: アメコミ風変換
-- `shouldConvertToComic()`: 条件判定
 
 ### line.ts
 
