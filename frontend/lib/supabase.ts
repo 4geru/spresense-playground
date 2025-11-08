@@ -1,12 +1,14 @@
 import { ImageData } from './types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /**
  * Supabaseから全画像を取得
  */
 export async function fetchImages(): Promise<ImageData[]> {
+  const supabaseUrl = projectId ? `https://${projectId}.supabase.co/functions/v1/get-original-images` : null;
+  console.log('Supabase URL:', supabaseUrl);
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Supabase configuration missing');
   }

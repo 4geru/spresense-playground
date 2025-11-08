@@ -21,6 +21,7 @@ interface LiffContextType {
   closeWindow: () => void;
   shareTargetPicker: (messages: any[]) => Promise<any>;
   isInClient: boolean;
+  isSharetargetPickerAvailable: boolean;
 }
 
 const LiffContext = createContext<LiffContextType | undefined>(undefined);
@@ -218,6 +219,7 @@ export function LiffProvider({ children }: { children: ReactNode }) {
     sendMessage,
     closeWindow,
     shareTargetPicker,
+    isSharetargetPickerAvailable: isLiffReady && liff.isInClient() ? liff.isApiAvailable('shareTargetPicker') : false,
     isInClient: isLiffReady ? liff.isInClient() : false,
   };
 

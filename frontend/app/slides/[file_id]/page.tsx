@@ -17,7 +17,7 @@ export default function SlideDetailPage() {
   const router = useRouter();
   const fileId = params.file_id as string;
 
-  const { isLoggedIn, profile, isLiffReady, error: liffError, login, shareTargetPicker, isInClient } = useLiff();
+  const { isLoggedIn, profile, isLiffReady, error: liffError, login, shareTargetPicker, isSharetargetPickerAvailable } = useLiff();
   const [images, setImages] = useState<ImageWithHash[]>([]);
   const [currentImage, setCurrentImage] = useState<ImageWithHash | null>(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -323,7 +323,7 @@ ${MESSAGE_TEMPLATES.SAFETY_NOTICE}`;
               {new Date(currentImage.created_at).toLocaleString()} · {(currentImage.size / 1024).toFixed(2)} KB
             </div>
           </div>
-          {isLoggedIn && (
+          {isLoggedIn && isSharetargetPickerAvailable && (
             <button
               onClick={handleShare}
               disabled={isSharing}

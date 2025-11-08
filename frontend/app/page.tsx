@@ -20,7 +20,8 @@ export default function SlideshowPage() {
   const [lastImageCount, setLastImageCount] = useState(0);
   const [currentTime, setCurrentTime] = useState('');
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID;
+  const supabaseUrl = projectId ? `https://${projectId}.supabase.co/functions/v1/get-original-images` : null;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   // 画像を読み込む
