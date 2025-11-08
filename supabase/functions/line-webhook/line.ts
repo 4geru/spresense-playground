@@ -109,8 +109,14 @@ export async function downloadImageContent(
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
-    // Base64エンコード
-    const base64 = btoa(String.fromCharCode(...uint8Array));
+    // Base64エンコード（チャンク処理でスタックオーバーフロー回避）
+    let binary = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, Math.min(i + chunkSize, uint8Array.length));
+      binary += String.fromCharCode(...chunk);
+    }
+    const base64 = btoa(binary);
 
     console.log(`✅ 画像ダウンロード完了 (サイズ: ${uint8Array.length} bytes, MIME: ${mimeType})`);
 
