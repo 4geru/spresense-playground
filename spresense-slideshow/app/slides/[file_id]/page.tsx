@@ -7,12 +7,15 @@ import Link from 'next/link';
 import { fetchImages } from '@/lib/supabase';
 import { generateHashId } from '@/lib/utils';
 import { ImageWithHash } from '@/lib/types';
+import LiffLogin from '@/components/LiffLogin';
+import { useLiff } from '@/hooks/useLiff';
 
 export default function SlideDetailPage() {
   const params = useParams();
   const router = useRouter();
   const fileId = params.file_id as string;
 
+  const { isLoggedIn, profile, isLiffReady } = useLiff();
   const [images, setImages] = useState<ImageWithHash[]>([]);
   const [currentImage, setCurrentImage] = useState<ImageWithHash | null>(null);
   const [currentIndex, setCurrentIndex] = useState(-1);
@@ -81,10 +84,21 @@ export default function SlideDetailPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, images]);
 
-  if (loading) {
+  if (loading || !isLiffReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
         <div className="text-white text-2xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // LIFF login required
+  if (!isLoggedIn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black p-4">
+        <div className="max-w-md w-full">
+          <LiffLogin showProfile={false} />
+        </div>
       </div>
     );
   }
@@ -105,16 +119,32 @@ export default function SlideDetailPage() {
   return (
     <div className="relative w-screen h-screen bg-black">
       {/* ヘッダー */}
-      <div className="fixed top-0 left-0 right-0 z-10 bg-black bg-opacity-70 text-white p-4 flex justify-between items-center">
-        <Link href="/slides" className="hover:text-gray-300 transition">
-          ← Back to Gallery
-        </Link>
-        <div className="text-sm">
-          {currentIndex + 1} / {images.length}
+      <div className="fixed top-0 left-0 right-0 z-10 bg-black bg-opacity-70 text-white p-4">
+        <div className="flex justify-between items-center">
+          <Link href="/slides" className="hover:text-gray-300 transition">
+            ← Back to Gallery
+          </Link>
+          <div className="text-sm">
+            {currentIndex + 1} / {images.length}
+          </div>
+          <div className="flex items-center gap-4">
+            {profile && (
+              <div className="flex items-center gap-2">
+                {profile.pictureUrl && (
+                  <img
+                    src={profile.pictureUrl}
+                    alt={profile.displayName}
+                    className="w-8 h-8 rounded-full"
+                  />
+                )}
+                <span className="text-sm hidden md:block">{profile.displayName}</span>
+              </div>
+            )}
+            <Link href="/" className="hover:text-gray-300 transition">
+              Slideshow
+            </Link>
+          </div>
         </div>
-        <Link href="/" className="hover:text-gray-300 transition">
-          Slideshow
-        </Link>
       </div>
 
       {/* メイン画像 */}
