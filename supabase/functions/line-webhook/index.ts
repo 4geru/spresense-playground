@@ -28,7 +28,7 @@ import {
   convertToComicStyle,
 } from "./gemini.ts";
 
-import { uploadImage, uploadOriginalOnly } from "./storage.ts";
+import { uploadImage } from "./storage.ts";
 
 // 環境変数の型定義
 interface EnvVars {
@@ -152,26 +152,6 @@ async function processImageMessage(
 
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
-    const originalUrl = await uploadOriginalOnly(
-      supabase,
-      env.BUCKET_NAME,
-      imageData,
-      mimeType
-    );
-
-    if (!originalUrl) {
-      console.error("❌ オリジナル画像の保存失敗");
-      if (userId) {
-        await lineClient.pushMessage(userId, {
-          type: "text",
-          text: "❌ 画像の保存に失敗しました。もう一度お試しください。",
-        });
-      }
-      return;
-    }
-
-    console.log(`✅ オリジナル画像保存完了: ${originalUrl}`);
-
     // [5] アメコミ風変換
     console.log("\n" + "=".repeat(60));
     console.log("🎨 アメコミ風変換フェーズ");
@@ -216,12 +196,20 @@ async function processImageMessage(
     console.log("📤 アメコミ風画像アップロードフェーズ");
     console.log("=".repeat(60));
 
+    await uploadImage(
+      supabase,
+      env.BUCKET_NAME,
+      imageData,
+      "image/png",
+      'preview'
+    );
+
     const comicUrl = await uploadImage(
       supabase,
       env.BUCKET_NAME,
       comicImageData,
       "image/png",
-      "comic"
+      'original'
     );
 
     if (!comicUrl) {
