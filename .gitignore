@@ -8,3 +8,5 @@
 /supabase/.temp
 /supabase/curl.sh
 /supabase/functions/.env.local
+/node_modules
+/frontend/frontend
