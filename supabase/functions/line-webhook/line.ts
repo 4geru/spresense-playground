@@ -218,26 +218,44 @@ export async function sendProcessingMessage(
 }
 
 /**
- * アメコミ風変換成功メッセージを送信
+ * 画像編集中メッセージを送信
  *
  * @param client - LINE Client
  * @param replyToken - リプライトークン
- * @param comicUrl - アメコミ風画像URL
- * @param originalUrl - オリジナル画像URL
  */
-export async function sendComicConversionResult(
+export async function sendEditingMessage(
   client: Client,
-  replyToken: string,
-  comicUrl: string,
-  originalUrl: string
+  replyToken: string
+): Promise<boolean> {
+  try {
+    const message: TextMessage = {
+      type: "text",
+      text: "🎨 画像を編集中です...\nしばらくお待ちください",
+    };
+
+    await client.replyMessage(replyToken, message);
+    console.log("✅ 編集中メッセージ送信成功");
+    return true;
+  } catch (error) {
+    console.error("❌ 編集中メッセージ送信エラー:", error);
+    return false;
+  }
+}
+
+/**
+ * アメコミ風変換画像をPush APIで送信
+ *
+ * @param client - LINE Client
+ * @param userId - ユーザーID
+ * @param comicUrl - アメコミ風画像URL
+ */
+export async function pushComicImage(
+  client: Client,
+  userId: string,
+  comicUrl: string
 ): Promise<boolean> {
   try {
     const messages: Message[] = [
-      {
-        type: "image",
-        originalContentUrl: originalUrl,
-        previewImageUrl: originalUrl,
-      } as ImageMessage,
       {
         type: "image",
         originalContentUrl: comicUrl,
@@ -249,11 +267,11 @@ export async function sendComicConversionResult(
       } as TextMessage,
     ];
 
-    await client.replyMessage(replyToken, messages);
-    console.log("✅ アメコミ風変換結果送信成功");
+    await client.pushMessage(userId, messages);
+    console.log("✅ アメコミ風変換画像送信成功");
     return true;
   } catch (error) {
-    console.error("❌ アメコミ風変換結果送信エラー:", error);
+    console.error("❌ アメコミ風変換画像送信エラー:", error);
     return false;
   }
 }

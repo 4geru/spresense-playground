@@ -18,7 +18,8 @@ import {
   findImageMessageEvent,
   downloadImageContent,
   echoTextMessage,
-  sendComicConversionResult,
+  sendEditingMessage,
+  pushComicImage,
   sendErrorMessage,
   showLoadingAnimation,
 } from "./line.ts";
@@ -121,11 +122,6 @@ async function processImageMessage(
   try {
     const lineClient = createLineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
 
-    // Loading Animationを表示（1対1チャットのみ）
-    if (userId) {
-      await showLoadingAnimation(userId, env.LINE_CHANNEL_ACCESS_TOKEN, 60);
-    }
-
     // [1] 画像ダウンロード
     console.log("=".repeat(60));
     console.log("📥 画像ダウンロードフェーズ");
@@ -141,7 +137,15 @@ async function processImageMessage(
 
     const { data: imageData, mimeType } = imageContent;
 
-    // [2] Supabase Storageにオリジナル画像を保存
+    // [2] 即座に「編集中」メッセージを送信（Reply APIを使用）
+    await sendEditingMessage(lineClient, replyToken);
+
+    // [3] Loading Animationを表示（1対1チャットのみ）
+    if (userId) {
+      await showLoadingAnimation(userId, env.LINE_CHANNEL_ACCESS_TOKEN, 60);
+    }
+
+    // [4] Supabase Storageにオリジナル画像を保存
     console.log("\n" + "=".repeat(60));
     console.log("💾 オリジナル画像保存フェーズ");
     console.log("=".repeat(60));
@@ -157,13 +161,18 @@ async function processImageMessage(
 
     if (!originalUrl) {
       console.error("❌ オリジナル画像の保存失敗");
-      await sendErrorMessage(lineClient, replyToken);
+      if (userId) {
+        await lineClient.pushMessage(userId, {
+          type: "text",
+          text: "❌ 画像の保存に失敗しました。もう一度お試しください。",
+        });
+      }
       return;
     }
 
     console.log(`✅ オリジナル画像保存完了: ${originalUrl}`);
 
-    // [3] アメコミ風変換
+    // [5] アメコミ風変換
     console.log("\n" + "=".repeat(60));
     console.log("🎨 アメコミ風変換フェーズ");
     console.log("=".repeat(60));
@@ -178,7 +187,12 @@ async function processImageMessage(
     } catch (error: any) {
       if (error?.isRateLimit) {
         console.error("❌ アメコミ風変換失敗: レート制限");
-        await sendErrorMessage(lineClient, replyToken, "rate_limit");
+        if (userId) {
+          await lineClient.pushMessage(userId, {
+            type: "text",
+            text: "⏰ 現在、AI処理のリクエストが集中しています。\n少し時間をおいてから（1-2分後）もう一度お試しください。",
+          });
+        }
         return;
       }
       throw error;
@@ -186,7 +200,12 @@ async function processImageMessage(
 
     if (!comicImageData) {
       console.error("❌ アメコミ風変換失敗");
-      await sendErrorMessage(lineClient, replyToken);
+      if (userId) {
+        await lineClient.pushMessage(userId, {
+          type: "text",
+          text: "❌ 画像変換に失敗しました。もう一度お試しください。",
+        });
+      }
       return;
     }
 
@@ -207,38 +226,52 @@ async function processImageMessage(
 
     if (!comicUrl) {
       console.error("❌ アメコミ風画像のアップロード失敗");
-      await sendErrorMessage(lineClient, replyToken);
+      if (userId) {
+        await lineClient.pushMessage(userId, {
+          type: "text",
+          text: "❌ 画像のアップロードに失敗しました。もう一度お試しください。",
+        });
+      }
       return;
     }
 
     console.log(`✅ アメコミ風画像保存完了: ${comicUrl}`);
 
-    // [4] LINE Reply APIで返信
+    // [7] LINE Push APIでアメコミ風画像のみ送信
     console.log("\n" + "=".repeat(60));
-    console.log("📤 LINE Reply API 送信フェーズ");
+    console.log("📤 LINE Push API 送信フェーズ");
     console.log("=".repeat(60));
 
-    const replySuccess = await sendComicConversionResult(
+    if (!userId) {
+      console.error("❌ userIdが取得できません");
+      return;
+    }
+
+    const pushSuccess = await pushComicImage(
       lineClient,
-      replyToken,
-      comicUrl,
-      originalUrl
+      userId,
+      comicUrl
     );
 
-    if (replySuccess) {
+    if (pushSuccess) {
       console.log("\n" + "=".repeat(60));
       console.log("🎉 処理完了: アメコミ風画像が送信されました！");
       console.log("=".repeat(60));
     } else {
-      console.error("❌ Reply API送信失敗");
+      console.error("❌ Push API送信失敗");
     }
   } catch (error) {
     console.error("❌ 処理中にエラー発生:", error);
-    try {
-      const lineClient = createLineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
-      await sendErrorMessage(lineClient, replyToken);
-    } catch (replyError) {
-      console.error("❌ エラーメッセージ送信も失敗:", replyError);
+    if (userId) {
+      try {
+        const lineClient = createLineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
+        await lineClient.pushMessage(userId, {
+          type: "text",
+          text: "❌ 処理中にエラーが発生しました。もう一度お試しください。",
+        });
+      } catch (pushError) {
+        console.error("❌ エラーメッセージ送信も失敗:", pushError);
+      }
     }
   }
 }
