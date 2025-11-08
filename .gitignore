@@ -1,4 +1,5 @@
 .env
+.env.local
 /venv
 .DS_Store
 /captured_images
@@ -6,3 +7,4 @@
 /__pycache__
 /supabase/.temp
 /supabase/curl.sh
+/supabase/functions/.env.local
