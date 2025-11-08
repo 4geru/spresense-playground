@@ -19,6 +19,7 @@ import sys
 import time
 import json
 import serial
+import glob
 from datetime import datetime
 from typing import Optional, Dict, Any, Tuple
 from dotenv import load_dotenv
@@ -36,8 +37,14 @@ load_dotenv()
 # =============================================================================
 
 # シリアル通信設定
-SERIAL_PORT = '/dev/cu.SLAB_USBtoUART'
+SERIAL_PORTS = [
+    '/dev/cu.SLAB_USBtoUART',
+    '/dev/cu.usbserial-10',
+    '/dev/tty.SLAB_USBtoUART',
+    '/dev/tty.usbserial-10'
+]
 BAUD_RATE = 115200
+TIMEOUT = 10  # 10秒タイムアウト
 START_MARKER = b'START_JPEG'
 END_MARKER = b'END_JPEG'
 OUTPUT_DIR = "captured_images"
@@ -47,14 +54,197 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 ANALYSIS_MODEL = 'gemini-2.5-flash'
 
 # =============================================================================
+# ユーティリティ機能
+# =============================================================================
+
+def cleanup_old_files(directory: str, max_files: int = 10) -> None:
+    """
+    指定ディレクトリ内のファイルを作成日時順でソートし、
+    最新のmax_files件以外を削除する
+    
+    Args:
+        directory: 対象ディレクトリ
+        max_files: 保持する最大ファイル数
+    """
+    try:
+        if not os.path.exists(directory):
+            return
+        
+        # 対象ファイルの取得（画像ファイルのみ）
+        file_patterns = [
+            os.path.join(directory, "*.jpg"),
+            os.path.join(directory, "*.jpeg"), 
+            os.path.join(directory, "*.png")
+        ]
+        
+        all_files = []
+        for pattern in file_patterns:
+            all_files.extend(glob.glob(pattern))
+        
+        if len(all_files) <= max_files:
+            return  # ファイル数が上限以下なら何もしない
+        
+        # ファイルを作成日時順でソート（新しい順）
+        files_with_time = []
+        for file_path in all_files:
+            try:
+                stat = os.stat(file_path)
+                files_with_time.append((file_path, stat.st_mtime))
+            except OSError:
+                continue
+        
+        files_with_time.sort(key=lambda x: x[1], reverse=True)
+        
+        # 古いファイルを削除
+        files_to_delete = files_with_time[max_files:]
+        deleted_count = 0
+        
+        for file_path, _ in files_to_delete:
+            try:
+                os.remove(file_path)
+                deleted_count += 1
+                print(f"🗑️ 古いファイルを削除: {os.path.basename(file_path)}")
+            except OSError as e:
+                print(f"⚠️ ファイル削除失敗: {file_path} - {e}")
+        
+        if deleted_count > 0:
+            print(f"✅ {deleted_count}個の古いファイルを削除しました")
+            print(f"📁 {directory} に {len(all_files) - deleted_count}個のファイルが残っています")
+        
+    except Exception as e:
+        print(f"⚠️ ファイルクリーンアップエラー: {e}")
+
+# =============================================================================
+# シリアル通信ユーティリティ
+# =============================================================================
+
+def find_available_serial_port() -> Optional[str]:
+    """
+    利用可能なSpresenseシリアルポートを自動検出
+    
+    Returns:
+        利用可能なポート名、見つからない場合はNone
+    """
+    print("🔍 Spresenseポートを検索中...")
+    
+    # まず実際に存在するポートを確認
+    import glob
+    existing_ports = []
+    for pattern in ['/dev/cu.*', '/dev/tty.*']:
+        existing_ports.extend(glob.glob(pattern))
+    
+    # Spresense関連のポートを優先的にテスト
+    spresense_keywords = ['SLAB_USBtoUART', 'usbserial', 'USB']
+    priority_ports = []
+    
+    for port in existing_ports:
+        for keyword in spresense_keywords:
+            if keyword in port:
+                priority_ports.append(port)
+                break
+    
+    # 設定済みポートと検出されたポートをマージ
+    test_ports = priority_ports + [p for p in SERIAL_PORTS if p in existing_ports]
+    
+    if not test_ports:
+        print("❌ Spresense関連のポートが見つかりません")
+        print("💡 USBケーブルとSpresenseの接続を確認してください")
+        return None
+    
+    for port in test_ports:
+        try:
+            # より安全なポート検証
+            if not os.path.exists(port):
+                continue
+                
+            test_ser = serial.Serial(
+                port=port,
+                baudrate=BAUD_RATE,
+                timeout=0.5,
+                write_timeout=0.5
+            )
+            
+            # 接続テスト
+            time.sleep(0.1)
+            test_ser.close()
+            print(f"✅ ポート検出: {port}")
+            return port
+            
+        except (serial.SerialException, OSError, ValueError):
+            continue
+        except Exception:
+            continue
+    
+    print("❌ 利用可能なSpresenseポートが見つかりませんでした")
+    print("💡 USBケーブル・電源・ドライバーを確認してください")
+    return None
+
+def open_serial_connection(port: str) -> Optional[serial.Serial]:
+    """
+    指定ポートでシリアル接続を開く
+    
+    Args:
+        port: シリアルポート名
+        
+    Returns:
+        シリアル接続オブジェクト、失敗時はNone
+    """
+    try:
+        print(f"📡 シリアル接続中...")
+        
+        # より慎重な接続手順
+        ser = serial.Serial()
+        ser.port = port
+        ser.baudrate = BAUD_RATE
+        ser.timeout = TIMEOUT
+        ser.write_timeout = TIMEOUT
+        ser.bytesize = serial.EIGHTBITS
+        ser.parity = serial.PARITY_NONE
+        ser.stopbits = serial.STOPBITS_ONE
+        ser.rtscts = False  # ハードウェアフロー制御を無効
+        ser.dsrdtr = False  # DTR/DSR制御を無効
+        
+        # 接続を開く
+        ser.open()
+        
+        # DTRをリセット（一部のデバイスで必要）
+        ser.setDTR(False)
+        time.sleep(0.1)
+        ser.setDTR(True)
+        time.sleep(0.1)
+        
+        # 接続安定化のため待機
+        time.sleep(1)
+        
+        # バッファをクリア
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
+        
+        # 接続テスト
+        if ser.is_open:
+            print(f"✅ 接続成功")
+            return ser
+        else:
+            ser.close()
+            
+    except (serial.SerialException, OSError, ValueError):
+        pass
+    except Exception:
+        pass
+    
+    print(f"❌ シリアル接続に失敗しました")
+    return None
+
+# =============================================================================
 # コア機能: Spresense通信
 # =============================================================================
 
 def send_take_photo_command(ser: serial.Serial) -> bool:
     """Spresenseに撮影コマンドを送信"""
     try:
-        print("📤 TAKE_PHOTOコマンドを送信...")
+        print("📤 撮影コマンド送信...")
         ser.write(b'TAKE_PHOTO\\n')
+        ser.flush()  # 送信バッファを強制フラッシュ
         return True
     except Exception as e:
         print(f"❌ コマンド送信エラー: {e}")
@@ -68,53 +258,80 @@ def receive_image_from_spresense(ser: serial.Serial) -> Tuple[Optional[bytes], O
         (image_bytes, file_path) のタプル、失敗時は (None, None)
     """
     try:
-        print("📥 開始マーカー待機中...")
+        print("📥 📷 Spresenseからの撮影応答を待機中...")
+        print("   ⏳ START_JPEGマーカーを監視...")
+        
         # Spresenseのコードに合わせてマーカー形式を修正
+        start_time = time.time()
         line = ser.read_until(START_MARKER)
         
         if line.endswith(START_MARKER):
-            print("✅ 画像データ送信開始を確認！")
-            print("📥 バイナリJPEGデータ受信中...")
+            elapsed = time.time() - start_time
+            print("🎉 ✅ 撮影成功！画像データ送信開始を確認！")
+            print(f"   ⏱️ 撮影時間: {elapsed:.2f}秒")
+            print("📥 🖼️ バイナリJPEGデータ受信中...")
             
             jpeg_data = b''
-            start_time = time.time()
+            receive_start = time.time()
+            last_progress_time = receive_start
+            total_chunks = 0
             
             while True:
                 chunk = ser.read(1024)
                 if chunk:
+                    total_chunks += 1
+                    # 進捗表示（1秒ごと）
+                    current_time = time.time()
+                    if current_time - last_progress_time >= 1.0:
+                        print(f"   📊 受信中... {len(jpeg_data):,} bytes ({total_chunks} chunks)")
+                        last_progress_time = current_time
+                    
                     # Spresenseのコードに合わせてマーカー処理を修正
                     if END_MARKER in chunk:
                         end_pos = chunk.find(END_MARKER)
                         jpeg_data += chunk[:end_pos]
+                        print("🏁 ✅ END_JPEGマーカー検出！受信完了")
                         break
                     else:
                         jpeg_data += chunk
                 
-                if time.time() - start_time > 30:
-                    print("❌ 受信タイムアウト")
+                if time.time() - receive_start > 30:
+                    print("❌ ⏰ 受信タイムアウト（30秒）")
                     break
 
             if jpeg_data:
+                receive_time = time.time() - receive_start
+                print(f"📊 受信統計:")
+                print(f"   📦 データサイズ: {len(jpeg_data):,} bytes")
+                print(f"   📈 チャンク数: {total_chunks}")
+                print(f"   ⏱️ 受信時間: {receive_time:.2f}秒")
+                print(f"   🚀 転送速度: {len(jpeg_data)/receive_time/1024:.1f} KB/s")
+                
                 # ファイル保存
                 os.makedirs(OUTPUT_DIR, exist_ok=True)
+                
+                # 古いファイルのクリーンアップ（最新10件を保持）
+                cleanup_old_files(OUTPUT_DIR, max_files=10)
                 timestamp = int(time.time())
                 file_name = os.path.join(OUTPUT_DIR, f"capture_{timestamp}.jpg")
                 
                 with open(file_name, "wb") as f:
                     f.write(jpeg_data)
                 
-                print(f"✅ 撮影完了！サイズ: {len(jpeg_data):,} bytes")
-                print(f"📁 保存先: {file_name}")
+                print("🎊 🎉 撮影・保存完了！")
+                print(f"📁 💾 保存先: {file_name}")
+                print("=" * 50)
                 return jpeg_data, file_name
             else:
-                print("❌ 画像データを受信できませんでした")
+                print("❌ 📷 画像データを受信できませんでした（空データ）")
                 return None, None
         else:
-            print("❌ 開始マーカーを受信できませんでした")
+            print("❌ 📷 START_JPEGマーカーを受信できませんでした")
+            print("   💡 Spresenseが応答していない可能性があります")
             return None, None
             
     except Exception as e:
-        print(f"❌ 画像受信エラー: {e}")
+        print(f"❌ 📷 画像受信エラー: {e}")
         return None, None
 
 # =============================================================================
@@ -243,7 +460,7 @@ def should_convert_to_comic(analysis_result: Optional[Dict[str, str]]) -> bool:
     should_convert = (face_detected == 'yes' and is_pose == 'yes')
     
     if should_convert:
-        print("✅ 条件マッチ: 人がいてポーズをしている → アメコミ風変換を実行")
+        print("✅ 🤖🤖🤖 条件マッチ: 人がいてポーズをしている → アメコミ風変換を実行 🤖🤖🤖")
     else:
         print("❌ 条件不一致: アメコミ風変換をスキップ")
         print(f"   - 人の顔: {face_detected}")
@@ -265,27 +482,32 @@ def capture_and_process_photo() -> tuple[bool, bool]:
         print("🚀 Spresense AI画像処理システム開始")
         print("=" * 60)
         
-        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=10)
-        print(f"✅ シリアル接続: {SERIAL_PORT}")
+        # 自動ポート検出
+        available_port = find_available_serial_port()
+        if not available_port:
+            print("❌ 利用可能なSpresenseポートが見つかりません")
+            return False, False
         
-        time.sleep(1)
-        ser.reset_input_buffer()
+        # シリアル接続を開く
+        ser = open_serial_connection(available_port)
+        if not ser:
+            print("❌ シリアル接続に失敗しました")
+            return False, False
         
         # 撮影コマンド送信
-        if not send_take_photo_command(ser):
-            return False
+        print("📸 📷 カメラ撮影フェーズ開始")
+        print("=" * 40)
         
-        # Spresenseからの応答をデバッグ表示
-        print("🔍 Spresenseからの応答を5秒間監視...")
-        start_time = time.time()
-        while time.time() - start_time < 5:
-            if ser.in_waiting > 0:
-                response = ser.read(ser.in_waiting)
-                print(f"📡 受信データ: {response}")
-                break
-            time.sleep(0.1)
+        if not send_take_photo_command(ser):
+            print("❌ 撮影コマンド送信に失敗")
+            return False, False
+        
+        # Spresenseからの応答を簡潔に監視
+        time.sleep(0.5)  # 短い待機のみ
         
         # 画像受信
+        print("📸 🖼️ 画像データ受信フェーズ")
+        print("-" * 40)
         image_data, original_path = receive_image_from_spresense(ser)
         if not image_data or not original_path:
             print("❌ 画像受信に失敗しました")
@@ -376,26 +598,45 @@ def continuous_photo_loop():
     try:
         while True:
             cycle_count += 1
-            print(f"\\n🔄 撮影サイクル {cycle_count} 開始")
-            print("=" * 40)
+            current_time = datetime.now().strftime("%H:%M:%S")
+            
+            print(f"\\n🔄 📷 撮影サイクル {cycle_count} 開始 [{current_time}]")
+            print("=" * 60)
+            print(f"📊 現在の統計: 撮影実行 {cycle_count-1}回, LINE送信成功 {send_count}回")
+            print("=" * 60)
             
             # 1回の撮影・処理を実行
+            cycle_start_time = time.time()
             process_success, send_executed = capture_and_process_photo()
+            cycle_duration = time.time() - cycle_start_time
+            
+            print("\\n" + "=" * 60)
+            print(f"🏁 サイクル {cycle_count} 完了 [処理時間: {cycle_duration:.1f}秒]")
             
             if process_success:
                 if send_executed:
                     send_count += 1
-                    print(f"📤 LINE送信実行: サイクル {cycle_count}")
+                    print(f"✅ 📤 LINE送信成功: サイクル {cycle_count}")
+                    print("🎉 ヒーローポーズが検出されました！")
                 else:
-                    print(f"⏭️ 送信スキップ: サイクル {cycle_count}")
+                    print(f"⏭️ 📤 送信スキップ: サイクル {cycle_count}")
+                    print("😊 通常の撮影でした（ポーズ検出なし）")
                 
-                print(f"📊 統計: 撮影回数 {cycle_count}, 送信回数 {send_count}")
+                success_rate = (send_count / cycle_count) * 100
+                print(f"📊 最新統計: 撮影 {cycle_count}回, 送信 {send_count}回 (成功率: {success_rate:.1f}%)")
             else:
-                print("⚠️ 撮影・処理に失敗しました。次の撮影に進みます")
+                print("⚠️ ❌ 撮影・処理に失敗しました。次の撮影に進みます")
+            
+            print("=" * 60)
             
             # 次の撮影まで待機
-            print("⏰ 5秒後に次の撮影を開始...")
-            time.sleep(5)
+            print("⏰ ⏳ 5秒後に次の撮影を開始...")
+            for i in range(5, 0, -1):
+                print(f"   ⏰ {i}秒...", end="", flush=True)
+                time.sleep(1)
+                if i > 1:
+                    print("", end="\\r", flush=True)
+            print("\\n")
             
     except KeyboardInterrupt:
         print(f"\\n👋 連続撮影を終了します")
@@ -442,40 +683,43 @@ def main():
     
     print("✅ 環境変数確認完了")
     
-    # 実行モードの選択
-    print("\\n実行モードを選択してください:")
-    print("1: 1回だけ撮影・処理")
-    print("2: 連続撮影ループ（人・ポーズ検出時のみ送信）")
+    # デフォルトはループモードで開始
+    print("\\n🔄 連続撮影ループモードで開始します")
+    print("   💡 1回だけ実行したい場合は --once オプションを使用してください")
+    print("   💡 例: python integrated_photo_system.py --once")
+    print("\\n実行モード:")
+    print("   📸 連続撮影ループ（人・ポーズ検出時のみ送信）")
+    print("   🗑️ 自動ファイルクリーンアップ（最新10件を保持）")
+    print("   🛑 終了するには Ctrl+C を押してください")
     
-    try:
-        mode = input("\\n選択 (1 or 2): ").strip()
+    # コマンドライン引数の確認
+    if len(sys.argv) > 1 and sys.argv[1] == "--once":
+        # 1回だけ実行モード
+        print("\\n🎯 1回実行モードで開始")
+        print("=" * 40)
         
-        if mode == "1":
-            # 1回だけ実行
-            process_success, send_executed = capture_and_process_photo()
-            
-            if process_success:
-                if send_executed:
-                    print("\\n🎊 処理が完了しました！アメコミ風画像を送信しました")
-                else:
-                    print("\\n✅ 処理が完了しました！条件不一致のため送信はスキップされました")
-                sys.exit(0)
+        process_success, send_executed = capture_and_process_photo()
+        
+        if process_success:
+            if send_executed:
+                print("\\n🎊 処理が完了しました！アメコミ風画像を送信しました")
             else:
-                print("\\n💥 処理中にエラーが発生しました")
-                sys.exit(1)
-                
-        elif mode == "2":
-            # 連続撮影ループ
+                print("\\n✅ 処理が完了しました！条件不一致のため送信はスキップされました")
+            sys.exit(0)
+        else:
+            print("\\n💥 処理中にエラーが発生しました")
+            sys.exit(1)
+    else:
+        # デフォルト: 連続撮影ループ
+        print("\\n⏳ 3秒後に連続撮影を開始します...")
+        time.sleep(3)
+        
+        try:
             continuous_photo_loop()
             sys.exit(0)
-            
-        else:
-            print("❌ 無効な選択です。1 または 2 を入力してください")
-            sys.exit(1)
-            
-    except KeyboardInterrupt:
-        print("\\n👋 ユーザーにより処理が中断されました")
-        sys.exit(0)
+        except KeyboardInterrupt:
+            print("\\n👋 ユーザーにより処理が中断されました")
+            sys.exit(0)
 
 if __name__ == "__main__":
     main()
