@@ -9,7 +9,7 @@ import { generateHashId } from '@/lib/utils';
 import { ImageWithHash } from '@/lib/types';
 import LiffLogin from '@/components/LiffLogin';
 import { useLiff } from '@/contexts/LiffContext';
-import QRCodeShare from '@/components/QRCodeShare';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function SlideDetailPage() {
   const params = useParams();
@@ -24,7 +24,6 @@ export default function SlideDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
-  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadImages() {
@@ -249,18 +248,6 @@ export default function SlideDetailPage() {
             {currentIndex + 1} / {images.length}
           </div>
           <div className="flex items-center gap-2">
-            {/* QRコードボタン（デスクトップのみ） */}
-            <button
-              onClick={() => setIsQRModalOpen(true)}
-              className="hidden md:flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition"
-              title="スマホで開く"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-              </svg>
-              <span className="hidden lg:inline">QR</span>
-            </button>
-
             {isLoggedIn && profile ? (
               <>
                 <span className="text-sm hidden sm:block">{profile.displayName}</span>
@@ -285,13 +272,17 @@ export default function SlideDetailPage() {
       </div>
 
       {/* メイン画像 */}
-      <div className="w-full min-h-screen flex items-start justify-center pt-16 pb-24 overflow-y-auto">
-        <img
-          src={currentImage.url}
-          alt={currentImage.name}
-          className="w-full h-auto"
-          style={{ maxWidth: '100%' }}
-        />
+      <div className="w-full h-full flex items-center justify-center pt-16 pb-24">
+        <div className="relative w-full h-full">
+          <Image
+            src={currentImage.url}
+            alt={currentImage.name}
+            fill
+            className="object-contain"
+            priority
+            unoptimized
+          />
+        </div>
       </div>
 
       {/* ナビゲーションボタン */}
@@ -359,12 +350,18 @@ export default function SlideDetailPage() {
         </div>
       )}
 
-      {/* QRコードモーダル */}
-      <QRCodeShare
-        hashId={fileId}
-        isOpen={isQRModalOpen}
-        onClose={() => setIsQRModalOpen(false)}
-      />
+      {/* QRコード常時表示（デスクトップのみ） */}
+      <div className="hidden md:block fixed top-20 right-4 z-40">
+        <div className="bg-white p-3 rounded-lg shadow-2xl border-2 border-gray-700">
+          <QRCodeSVG
+            value={`https://line.me/R/oaMessage/${process.env.NEXT_PUBLIC_LINE_BOT_ID || '@YOUR_BOT_ID'}/?${encodeURIComponent(`Codename:${fileId}`)}`}
+            size={150}
+            level="H"
+            includeMargin={false}
+          />
+          <p className="text-xs text-center text-gray-600 mt-2">スマホで開く</p>
+        </div>
+      </div>
     </div>
   );
 }
