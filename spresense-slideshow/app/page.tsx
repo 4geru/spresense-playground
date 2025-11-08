@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface ImageData {
   name: string;
@@ -209,6 +210,14 @@ export default function SlideshowPage() {
       <div className="fixed top-5 left-5 bg-black bg-opacity-70 text-white px-4 py-2 rounded-md text-sm z-[2000]">
         📸 Images: {images.length} | 🕒 {currentTime}
       </div>
+
+      {/* 画像一覧へのリンク */}
+      <Link
+        href="/slides"
+        className="fixed top-5 left-1/2 -translate-x-1/2 bg-purple-600 bg-opacity-90 hover:bg-opacity-100 text-white px-6 py-2 rounded-lg text-sm z-[2000] transition shadow-lg"
+      >
+        📷 View Gallery
+      </Link>
 
       {/* スライドショー */}
       {images.length > 0 && (
