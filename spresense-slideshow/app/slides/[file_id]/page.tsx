@@ -9,6 +9,7 @@ import { generateHashId } from '@/lib/utils';
 import { ImageWithHash } from '@/lib/types';
 import LiffLogin from '@/components/LiffLogin';
 import { useLiff } from '@/contexts/LiffContext';
+import QRCodeShare from '@/components/QRCodeShare';
 
 export default function SlideDetailPage() {
   const params = useParams();
@@ -23,6 +24,7 @@ export default function SlideDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadImages() {
@@ -247,6 +249,18 @@ export default function SlideDetailPage() {
             {currentIndex + 1} / {images.length}
           </div>
           <div className="flex items-center gap-2">
+            {/* QRコードボタン（デスクトップのみ） */}
+            <button
+              onClick={() => setIsQRModalOpen(true)}
+              className="hidden md:flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded text-sm transition"
+              title="スマホで開く"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              </svg>
+              <span className="hidden lg:inline">QR</span>
+            </button>
+
             {isLoggedIn && profile ? (
               <>
                 <span className="text-sm hidden sm:block">{profile.displayName}</span>
@@ -344,6 +358,13 @@ export default function SlideDetailPage() {
           {liffError && <div className="text-red-400 mt-2">Error: {liffError}</div>}
         </div>
       )}
+
+      {/* QRコードモーダル */}
+      <QRCodeShare
+        hashId={fileId}
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+      />
     </div>
   );
 }

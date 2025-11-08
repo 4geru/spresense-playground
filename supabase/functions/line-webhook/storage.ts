@@ -4,6 +4,7 @@
  * 機能:
  * - 画像のアップロード
  * - 公開URLの取得
+ * - hashIdによる画像検索
  */
 
 import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -34,6 +35,80 @@ function getExtensionFromMimeType(mimeType: string): string {
   };
 
   return mimeMap[mimeType] || "jpg";
+}
+
+/**
+ * ファイル名から安定したハッシュIDを生成（フロントエンドと同じロジック）
+ */
+export function generateHashId(fileName: string): string {
+  let hash = 0;
+  for (let i = 0; i < fileName.length; i++) {
+    const char = fileName.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+
+  // 絶対値を取って16進数に変換（9文字）
+  return Math.abs(hash).toString(16).padStart(9, '0').substring(0, 9);
+}
+
+/**
+ * hashIdから画像を検索
+ *
+ * @param supabase - Supabaseクライアント
+ * @param bucketName - バケット名
+ * @param hashId - 検索するハッシュID
+ * @returns 画像情報（名前、URL、hashId）または null
+ */
+export async function findImageByHashId(
+  supabase: SupabaseClient,
+  bucketName: string,
+  hashId: string
+): Promise<{ name: string; url: string; hashId: string } | null> {
+  try {
+    console.log(`🔍 hashIdで画像を検索中: ${hashId}`);
+
+    // バケット内の全ファイルを取得
+    const { data: files, error } = await supabase.storage
+      .from(bucketName)
+      .list();
+
+    if (error) {
+      console.error("❌ ファイルリスト取得エラー:", error);
+      return null;
+    }
+
+    // _original_ を含むファイルのみをフィルタリング
+    const originalFiles = files.filter(f => f.name.includes('_original'));
+
+    console.log(`📁 検索対象ファイル数: ${originalFiles.length}`);
+
+    // hashIdが一致するファイルを検索
+    for (const file of originalFiles) {
+      const fileHashId = generateHashId(file.name);
+
+      if (fileHashId === hashId) {
+        // 公開URLを取得
+        const { data: urlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(file.name);
+
+        console.log(`✅ 画像が見つかりました: ${file.name}`);
+
+        return {
+          name: file.name,
+          url: urlData.publicUrl,
+          hashId: fileHashId
+        };
+      }
+    }
+
+    console.log(`❌ hashId ${hashId} に一致する画像が見つかりませんでした`);
+    return null;
+  } catch (error) {
+    console.error("❌ 画像検索エラー:", error);
+    return null;
+  }
 }
 
 /**

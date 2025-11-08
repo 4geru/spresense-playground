@@ -22,13 +22,14 @@ import {
   pushComicImage,
   sendErrorMessage,
   showLoadingAnimation,
+  sendImageFlexMessage,
 } from "./line.ts";
 
 import {
   convertToComicStyle,
 } from "./gemini.ts";
 
-import { uploadImage } from "./storage.ts";
+import { uploadImage, findImageByHashId } from "./storage.ts";
 
 // 環境変数の型定義
 interface EnvVars {
@@ -38,6 +39,7 @@ interface EnvVars {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
   BUCKET_NAME: string;
+  LIFF_ID: string;
 }
 
 /**
@@ -51,6 +53,7 @@ function getEnvVars(): EnvVars | null {
     "SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
     "BUCKET_NAME",
+    "LIFF_ID",
   ];
 
   const missingVars: string[] = [];
@@ -74,6 +77,7 @@ function getEnvVars(): EnvVars | null {
     SUPABASE_URL: Deno.env.get("SUPABASE_URL")!,
     SUPABASE_SERVICE_ROLE_KEY: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     BUCKET_NAME: Deno.env.get("BUCKET_NAME")!,
+    LIFF_ID: Deno.env.get("LIFF_ID")!,
   };
 }
 
@@ -97,7 +101,48 @@ async function processTextMessage(
     console.log(`   内容: "${text}"`);
 
     const lineClient = createLineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
-    await echoTextMessage(lineClient, replyToken, text);
+
+    // Codename:{hashId} パターンをチェック
+    if (text.startsWith('Codename:')) {
+      console.log("🔍 QRコード経由の画像表示リクエストを検出");
+
+      const hashId = text.split(':', 2)[1].trim();
+      console.log(`   hashId: ${hashId}`);
+
+      // Supabaseクライアントを初期化
+      const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+
+      // hashIdから画像を検索
+      const imageInfo = await findImageByHashId(supabase, env.BUCKET_NAME, hashId);
+
+      if (imageInfo) {
+        // LIFF URLを生成（Endpoint URLが /slides なので、パスは /{hashId} のみ）
+        const liffUrl = `https://liff.line.me/${env.LIFF_ID}/${hashId}`;
+
+        console.log(`✅ 画像が見つかりました: ${imageInfo.name}`);
+        console.log(`🔗 LIFF URL: ${liffUrl}`);
+
+        // Flex Messageで画像とLIFFリンクを返信
+        await sendImageFlexMessage(
+          lineClient,
+          replyToken,
+          imageInfo.url,
+          hashId,
+          liffUrl
+        );
+      } else {
+        // 画像が見つからない場合
+        console.log(`❌ 画像が見つかりませんでした (hashId: ${hashId})`);
+
+        await lineClient.replyMessage(replyToken, {
+          type: "text",
+          text: `申し訳ありません。画像が見つかりませんでした。\n(ID: ${hashId})`,
+        });
+      }
+    } else {
+      // その他のテキストメッセージはオウム返し
+      await echoTextMessage(lineClient, replyToken, text);
+    }
   } catch (error) {
     console.error("❌ テキストメッセージ処理エラー:", error);
   }

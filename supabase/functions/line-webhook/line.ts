@@ -363,3 +363,100 @@ export async function sendErrorMessage(
     console.error("❌ エラーメッセージ送信も失敗:", error);
   }
 }
+
+/**
+ * 画像とLIFFリンクを含むFlex Messageを送信
+ *
+ * @param client - LINE Client
+ * @param replyToken - リプライトークン
+ * @param imageUrl - 画像のURL
+ * @param hashId - 画像のハッシュID
+ * @param liffUrl - LIFF アプリのURL
+ */
+export async function sendImageFlexMessage(
+  client: Client,
+  replyToken: string,
+  imageUrl: string,
+  hashId: string,
+  liffUrl: string
+): Promise<boolean> {
+  try {
+    console.log(`📤 Flex Message送信中...`);
+    console.log(`   画像URL: ${imageUrl}`);
+    console.log(`   LIFF URL: ${liffUrl}`);
+
+    const flexMessage = {
+      type: "flex",
+      altText: "📸 画像をスライドショーで見る - Boom!ヒーロー!!",
+      contents: {
+        type: "bubble",
+        hero: {
+          type: "image",
+          url: imageUrl,
+          size: "full",
+          aspectRatio: "4:3",
+          aspectMode: "cover",
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "📸 ヒーロー、見参！",
+              weight: "bold",
+              size: "xl",
+              color: "#06C755",
+            },
+            {
+              type: "separator",
+              margin: "md",
+            },
+            {
+              type: "text",
+              text: "スライドショーで大きく表示できます",
+              size: "sm",
+              color: "#aaaaaa",
+              margin: "md",
+              wrap: true,
+            },
+          ],
+          backgroundColor: "#16213e",
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          spacing: "sm",
+          contents: [
+            {
+              type: "button",
+              style: "primary",
+              action: {
+                type: "uri",
+                label: "🎬 スライドショーで見る",
+                uri: liffUrl,
+              },
+              color: "#06C755",
+            },
+          ],
+          backgroundColor: "#16213e",
+        },
+        styles: {
+          body: {
+            backgroundColor: "#16213e",
+          },
+          footer: {
+            backgroundColor: "#16213e",
+          },
+        },
+      },
+    } as any;
+
+    await client.replyMessage(replyToken, flexMessage);
+    console.log("✅ Flex Message送信成功");
+    return true;
+  } catch (error) {
+    console.error("❌ Flex Message送信エラー:", error);
+    return false;
+  }
+}
