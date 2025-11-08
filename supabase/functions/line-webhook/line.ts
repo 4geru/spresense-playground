@@ -216,8 +216,8 @@ export async function sendProcessingMessage(
  *
  * @param client - LINE Client
  * @param replyToken - リプライトークン
- * @param comicUrl - アメコミ風画像URL（メイン表示）
- * @param originalUrl - オリジナル画像URL（プレビュー表示）
+ * @param comicUrl - アメコミ風画像URL
+ * @param originalUrl - オリジナル画像URL
  */
 export async function sendComicConversionResult(
   client: Client,
@@ -229,8 +229,13 @@ export async function sendComicConversionResult(
     const messages: Message[] = [
       {
         type: "image",
-        originalContentUrl: comicUrl,
+        originalContentUrl: originalUrl,
         previewImageUrl: originalUrl,
+      } as ImageMessage,
+      {
+        type: "image",
+        originalContentUrl: comicUrl,
+        previewImageUrl: comicUrl,
       } as ImageMessage,
       {
         type: "text",
