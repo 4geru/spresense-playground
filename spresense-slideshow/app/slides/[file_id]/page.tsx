@@ -128,9 +128,20 @@ export default function SlideDetailPage() {
 
     setIsSharing(true);
     try {
-      const botId = process.env.NEXT_PUBLIC_LINE_BOT_ID || '@YOUR_BOT_ID';
-      const addFriendUrl = `https://line.me/R/ti/p/${botId}`;
       const senderName = profile?.displayName || 'あなた';
+
+      // LIFF URL を生成
+      const liffUrl = `https://liff.line.me/${process.env.NEXT_PUBLIC_LIFF_ID}/${fileId}`;
+
+      // LINE共有URL を生成
+      const shareText = `🦸 ${senderName}さんから、ヒーロー写真が届いたよ！
+
+カッコよく変身した姿を見てみよう💥
+
+${liffUrl}
+☝️ タップして開く ☝️
+※Boom!ヒーロー!!公式アプリで安全に表示されます`;
+      const shareUrl = `https://line.me/R/share?text=${encodeURIComponent(shareText)}`;
 
       await shareTargetPicker([
         // 1. 画像メッセージ
@@ -139,7 +150,7 @@ export default function SlideDetailPage() {
           originalContentUrl: currentImage.url,
           previewImageUrl: currentImage.url,
         },
-        // 2. FlexMessage（アプリ説明 + 友達追加）
+        // 2. FlexMessage（画像共有 + スライドショーリンク + 友達追加）
         {
           type: 'flex',
           altText: `${senderName}さんから画像を受け取りました - Boom!ヒーロー!!`,
@@ -147,72 +158,71 @@ export default function SlideDetailPage() {
             type: 'bubble',
             hero: {
               type: 'image',
-              url: `${window.location.origin}/boom-hero-intro.jpg`,
+              url: currentImage.url,
               size: 'full',
               aspectMode: 'cover',
-              aspectRatio: '5:2',
+              aspectRatio: '4:3',
             },
             body: {
               type: 'box',
               layout: 'vertical',
               contents: [
-                // 1. 画像を受け取りました
                 {
                   type: 'text',
-                  text: `${senderName}さんから画像を受け取りました`,
-                  size: 'md',
+                  text: '📸 ヒーロー、見参！',
+                  size: 'xl',
                   color: '#06C755',
                   weight: 'bold',
                   wrap: true,
                 },
-                // 2. Bot の説明
                 {
-                  type: 'box',
-                  layout: 'vertical',
-                  margin: 'lg',
-                  spacing: 'sm',
-                  contents: [
-                    {
-                      type: 'text',
-                      text: '📸 写真を送るだけで',
-                      color: '#aaaaaa',
-                      size: 'sm',
-                      wrap: true,
-                      margin: 'md',
-                    },
-                    {
-                      type: 'text',
-                      text: '🎨 AIがアメコミ風に変換',
-                      color: '#aaaaaa',
-                      size: 'sm',
-                      wrap: true,
-                    }
-                  ],
+                  type: "separator",
+                  margin: "md",
                 },
-                // 3. セパレーター
                 {
-                  type: 'separator',
-                  margin: 'lg',
-                },
-                // 4. Bot の追加ボタン
-                {
-                  type: 'button',
-                  style: 'primary',
-                  height: 'sm',
-                  action: {
-                    type: 'uri',
-                    label: '友達追加して使ってみる',
-                    uri: addFriendUrl,
-                  },
-                  color: '#06C755',
-                  margin: 'lg',
+                  type: 'text',
+                  text: `${senderName}さんから画像を受け取りました`,
+                  size: 'sm',
+                  color: '#aaaaaa',
+                  margin: 'md',
+                  wrap: true,
                 },
               ],
               backgroundColor: '#16213e',
               paddingAll: 'lg',
             },
+            footer: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'sm',
+              contents: [
+                {
+                  type: 'button',
+                  style: 'primary',
+                  action: {
+                    type: 'uri',
+                    label: '🎬 スライドショーで見る',
+                    uri: liffUrl,
+                  },
+                  color: '#06C755',
+                },
+                {
+                  type: 'button',
+                  style: 'secondary',
+                  action: {
+                    type: 'uri',
+                    label: '他の人に共有する',
+                    uri: shareUrl,
+                  },
+                },
+              ],
+              backgroundColor: '#16213e',
+            },
             styles: {
               body: {
+                backgroundColor: '#16213e',
+              },
+              footer: {
                 backgroundColor: '#16213e',
               },
             },
