@@ -7,9 +7,10 @@ import Link from 'next/link';
 import { fetchImages } from '@/lib/supabase';
 import { generateHashId } from '@/lib/utils';
 import { ImageWithHash } from '@/lib/types';
-import LiffLogin from '@/components/LiffLogin';
 import { useLiff } from '@/contexts/LiffContext';
 import { QRCodeSVG } from 'qrcode.react';
+import { LINE_COLORS, API_ENDPOINTS, UI_CONSTANTS, FLEX_MESSAGE, MESSAGE_TEMPLATES } from '@/lib/constants';
+import Toast from '@/components/Toast';
 
 export default function SlideDetailPage() {
   const params = useParams();
@@ -23,6 +24,7 @@ export default function SlideDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
 
   useEffect(() => {
     async function loadImages() {
@@ -122,7 +124,7 @@ export default function SlideDetailPage() {
 
   const handleShare = async () => {
     if (!isLoggedIn) {
-      alert('Please login first');
+      setToast({ message: 'Please login first', type: 'error' });
       return;
     }
 
@@ -139,9 +141,9 @@ export default function SlideDetailPage() {
 カッコよく変身した姿を見てみよう💥
 
 ${liffUrl}
-☝️ タップして開く ☝️
-※Boom!ヒーロー!!公式アプリで安全に表示されます`;
-      const shareUrl = `https://line.me/R/share?text=${encodeURIComponent(shareText)}`;
+${MESSAGE_TEMPLATES.SHARE_CALL_TO_ACTION}
+${MESSAGE_TEMPLATES.SAFETY_NOTICE}`;
+      const shareUrl = `${API_ENDPOINTS.LINE_SHARE}?text=${encodeURIComponent(shareText)}`;
 
       await shareTargetPicker([
         // 1. 画像メッセージ
@@ -153,15 +155,15 @@ ${liffUrl}
         // 2. FlexMessage（画像共有 + スライドショーリンク + 友達追加）
         {
           type: 'flex',
-          altText: `${senderName}さんから画像を受け取りました - Boom!ヒーロー!!`,
+          altText: `${senderName}さんから画像を受け取りました - ${MESSAGE_TEMPLATES.BRAND_NAME}`,
           contents: {
             type: 'bubble',
             hero: {
               type: 'image',
               url: currentImage.url,
-              size: 'full',
-              aspectMode: 'cover',
-              aspectRatio: '4:3',
+              size: FLEX_MESSAGE.IMAGE_SIZE,
+              aspectMode: FLEX_MESSAGE.ASPECT_MODE,
+              aspectRatio: FLEX_MESSAGE.ASPECT_RATIO,
             },
             body: {
               type: 'box',
@@ -169,9 +171,9 @@ ${liffUrl}
               contents: [
                 {
                   type: 'text',
-                  text: '📸 ヒーロー、見参！',
-                  size: 'xl',
-                  color: '#06C755',
+                  text: FLEX_MESSAGE.HERO_TITLE,
+                  size: FLEX_MESSAGE.TITLE_SIZE,
+                  color: LINE_COLORS.GREEN_600,
                   weight: 'bold',
                   wrap: true,
                 },
@@ -182,13 +184,13 @@ ${liffUrl}
                 {
                   type: 'text',
                   text: `${senderName}さんから画像を受け取りました`,
-                  size: 'sm',
-                  color: '#aaaaaa',
+                  size: FLEX_MESSAGE.TEXT_SIZE_SM,
+                  color: LINE_COLORS.GRAY_400,
                   margin: 'md',
                   wrap: true,
                 },
               ],
-              backgroundColor: '#16213e',
+              backgroundColor: LINE_COLORS.DARK_BG,
               paddingAll: 'lg',
             },
             footer: {
@@ -201,29 +203,29 @@ ${liffUrl}
                   style: 'primary',
                   action: {
                     type: 'uri',
-                    label: '🎬 スライドショーで見る',
+                    label: FLEX_MESSAGE.BUTTON_PRIMARY_LABEL,
                     uri: liffUrl,
                   },
-                  color: '#06C755',
+                  color: LINE_COLORS.GREEN_600,
                 },
                 {
                   type: 'button',
                   style: 'secondary',
                   action: {
                     type: 'uri',
-                    label: '他の人に共有する',
+                    label: FLEX_MESSAGE.BUTTON_SHARE_LABEL,
                     uri: shareUrl,
                   },
                 },
               ],
-              backgroundColor: '#16213e',
+              backgroundColor: LINE_COLORS.DARK_BG,
             },
             styles: {
               body: {
-                backgroundColor: '#16213e',
+                backgroundColor: LINE_COLORS.DARK_BG,
               },
               footer: {
-                backgroundColor: '#16213e',
+                backgroundColor: LINE_COLORS.DARK_BG,
               },
             },
           },
@@ -232,7 +234,7 @@ ${liffUrl}
     } catch (err) {
       console.error('Share failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Share failed';
-      alert(errorMessage);
+      setToast({ message: errorMessage, type: 'error' });
     } finally {
       setIsSharing(false);
     }
@@ -325,7 +327,7 @@ ${liffUrl}
             <button
               onClick={handleShare}
               disabled={isSharing}
-              className="bg-[#06C755] hover:bg-[#05b34c] disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm transition flex items-center gap-2 whitespace-nowrap"
+              className="bg-[#06C755] hover:bg-[#05b34c] disabled:bg-gray-600 disabled:hover:bg-gray-600 text-white px-4 py-2 rounded text-sm transition flex items-center gap-2 whitespace-nowrap"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -345,14 +347,23 @@ ${liffUrl}
       <div className="hidden md:block fixed top-20 right-4 z-40">
         <div className="bg-white p-3 rounded-lg shadow-2xl border-2 border-gray-700">
           <QRCodeSVG
-            value={`https://line.me/R/oaMessage/${process.env.NEXT_PUBLIC_LINE_BOT_ID || '@YOUR_BOT_ID'}/?${encodeURIComponent(`Codename:${fileId}`)}`}
-            size={150}
-            level="H"
+            value={`${API_ENDPOINTS.LINE_OA_MESSAGE}/${process.env.NEXT_PUBLIC_LINE_BOT_ID || '@YOUR_BOT_ID'}/?${encodeURIComponent(`Codename:${fileId}`)}`}
+            size={UI_CONSTANTS.QR_CODE_SIZE_SMALL}
+            level={UI_CONSTANTS.QR_CODE_ERROR_CORRECTION_LEVEL}
             includeMargin={false}
           />
-          <p className="text-xs text-center text-gray-600 mt-2">スマホで開く</p>
+          <p className="text-xs text-center text-gray-600 mt-2">{MESSAGE_TEMPLATES.QR_SCAN_INSTRUCTION}</p>
         </div>
       </div>
+
+      {/* Toast通知 */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

@@ -17,7 +17,17 @@ import {
   Message,
   ImageEventMessage,
   TextEventMessage,
+  FlexMessage,
+  FlexBubble,
 } from "npm:@line/bot-sdk@9.3.0";
+
+import {
+  LINE_COLORS,
+  FLEX_MESSAGE,
+  LINE_STICKERS,
+  MESSAGE_TEMPLATES,
+  DURATIONS,
+} from "./constants.ts";
 
 // LINE Client の初期化
 export function createLineClient(channelAccessToken: string): Client {
@@ -169,7 +179,7 @@ export async function echoTextMessage(
 export async function showLoadingAnimation(
   userId: string,
   accessToken: string,
-  seconds: number = 20
+  seconds: number = DURATIONS.LOADING_ANIMATION_SECONDS
 ): Promise<void> {
   try {
     console.log(`⏳ Loading Animation表示開始 (${seconds}秒)`);
@@ -184,7 +194,7 @@ export async function showLoadingAnimation(
         },
         body: JSON.stringify({
           chatId: userId,
-          loadingSeconds: Math.min(Math.max(seconds, 5), 60), // 5-60秒に制限
+          loadingSeconds: Math.min(Math.max(seconds, DURATIONS.LOADING_ANIMATION_MIN), DURATIONS.LOADING_ANIMATION_MAX),
         }),
       }
     );
@@ -230,14 +240,14 @@ export async function sendEditingMessage(
   try {
     const message: TextMessage = {
       type: "text",
-      text: "🎨 画像を編集中です...\nしばらくお待ちください",
+      text: MESSAGE_TEMPLATES.EDITING,
     };
 
     await client.replyMessage(replyToken, [
       {
         type: "sticker",
-        packageId: "11537",
-        stickerId: "52002746",
+        packageId: LINE_STICKERS.EDITING.packageId,
+        stickerId: LINE_STICKERS.EDITING.stickerId,
       },
       message
     ]);
@@ -270,7 +280,7 @@ export async function pushComicImage(
       } as ImageMessage,
       {
         type: "text",
-        text: "🦸 アメコミ風変換完了！",
+        text: MESSAGE_TEMPLATES.COMIC_COMPLETE,
       } as TextMessage,
     ];
 
@@ -385,17 +395,17 @@ export async function sendImageFlexMessage(
     console.log(`   画像URL: ${imageUrl}`);
     console.log(`   LIFF URL: ${liffUrl}`);
 
-    const flexMessage = {
+    const flexMessage: FlexMessage = {
       type: "flex",
-      altText: "📸 画像をスライドショーで見る - Boom!ヒーロー!!",
+      altText: FLEX_MESSAGE.ALT_TEXT_TEMPLATE(MESSAGE_TEMPLATES.BRAND_NAME),
       contents: {
         type: "bubble",
         hero: {
           type: "image",
           url: imageUrl,
-          size: "full",
-          aspectRatio: "4:3",
-          aspectMode: "cover",
+          size: FLEX_MESSAGE.IMAGE_SIZE,
+          aspectRatio: FLEX_MESSAGE.ASPECT_RATIO,
+          aspectMode: FLEX_MESSAGE.ASPECT_MODE,
         },
         body: {
           type: "box",
@@ -403,10 +413,10 @@ export async function sendImageFlexMessage(
           contents: [
             {
               type: "text",
-              text: "📸 ヒーロー、見参！",
+              text: FLEX_MESSAGE.HERO_TITLE,
               weight: "bold",
-              size: "xl",
-              color: "#06C755",
+              size: FLEX_MESSAGE.TITLE_SIZE,
+              color: LINE_COLORS.GREEN_600,
             },
             {
               type: "separator",
@@ -414,14 +424,14 @@ export async function sendImageFlexMessage(
             },
             {
               type: "text",
-              text: "スライドショーで大きく表示できます",
-              size: "sm",
-              color: "#aaaaaa",
+              text: MESSAGE_TEMPLATES.SLIDESHOW_DESCRIPTION,
+              size: FLEX_MESSAGE.TEXT_SIZE_SM,
+              color: LINE_COLORS.GRAY_400,
               margin: "md",
               wrap: true,
             },
           ],
-          backgroundColor: "#16213e",
+          backgroundColor: LINE_COLORS.DARK_BG,
         },
         footer: {
           type: "box",
@@ -433,24 +443,24 @@ export async function sendImageFlexMessage(
               style: "primary",
               action: {
                 type: "uri",
-                label: "🎬 スライドショーで見る",
+                label: FLEX_MESSAGE.BUTTON_PRIMARY_LABEL,
                 uri: liffUrl,
               },
-              color: "#06C755",
+              color: LINE_COLORS.GREEN_600,
             },
           ],
-          backgroundColor: "#16213e",
+          backgroundColor: LINE_COLORS.DARK_BG,
         },
         styles: {
           body: {
-            backgroundColor: "#16213e",
+            backgroundColor: LINE_COLORS.DARK_BG,
           },
           footer: {
-            backgroundColor: "#16213e",
+            backgroundColor: LINE_COLORS.DARK_BG,
           },
         },
       },
-    } as any;
+    };
 
     await client.replyMessage(replyToken, flexMessage);
     console.log("✅ Flex Message送信成功");

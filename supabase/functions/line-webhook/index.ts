@@ -31,6 +31,8 @@ import {
 
 import { uploadImage, findImageByHashId } from "./storage.ts";
 
+import { MESSAGE_TEMPLATES, DURATIONS } from "./constants.ts";
+
 // 環境変数の型定義
 interface EnvVars {
   GEMINI_API_KEY: string;
@@ -136,7 +138,7 @@ async function processTextMessage(
 
         await lineClient.replyMessage(replyToken, {
           type: "text",
-          text: `申し訳ありません。画像が見つかりませんでした。\n(ID: ${hashId})`,
+          text: MESSAGE_TEMPLATES.IMAGE_NOT_FOUND(hashId),
         });
       }
     } else {
@@ -187,7 +189,7 @@ async function processImageMessage(
 
     // [3] Loading Animationを表示（1対1チャットのみ）
     if (userId) {
-      await showLoadingAnimation(userId, env.LINE_CHANNEL_ACCESS_TOKEN, 60);
+      await showLoadingAnimation(userId, env.LINE_CHANNEL_ACCESS_TOKEN, DURATIONS.LOADING_ANIMATION_SECONDS);
     }
 
     // [4] Supabase Storageにオリジナル画像を保存
@@ -215,7 +217,7 @@ async function processImageMessage(
         if (userId) {
           await lineClient.pushMessage(userId, {
             type: "text",
-            text: "⏰ 現在、AI処理のリクエストが集中しています。\n少し時間をおいてから（1-2分後）もう一度お試しください。",
+            text: MESSAGE_TEMPLATES.ERROR_RATE_LIMIT,
           });
         }
         return;
@@ -228,7 +230,7 @@ async function processImageMessage(
       if (userId) {
         await lineClient.pushMessage(userId, {
           type: "text",
-          text: "❌ 画像変換に失敗しました。もう一度お試しください。",
+          text: MESSAGE_TEMPLATES.ERROR_CONVERSION_FAILED,
         });
       }
       return;
@@ -262,7 +264,7 @@ async function processImageMessage(
       if (userId) {
         await lineClient.pushMessage(userId, {
           type: "text",
-          text: "❌ 画像のアップロードに失敗しました。もう一度お試しください。",
+          text: MESSAGE_TEMPLATES.ERROR_UPLOAD_FAILED,
         });
       }
       return;
@@ -300,7 +302,7 @@ async function processImageMessage(
         const lineClient = createLineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
         await lineClient.pushMessage(userId, {
           type: "text",
-          text: "❌ 処理中にエラーが発生しました。もう一度お試しください。",
+          text: MESSAGE_TEMPLATES.ERROR_PROCESSING_FAILED,
         });
       } catch (pushError) {
         console.error("❌ エラーメッセージ送信も失敗:", pushError);

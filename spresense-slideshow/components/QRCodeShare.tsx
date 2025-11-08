@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { API_ENDPOINTS, UI_CONSTANTS, MESSAGE_TEMPLATES } from '@/lib/constants';
 
 interface QRCodeShareProps {
   hashId: string;
@@ -18,7 +19,7 @@ export default function QRCodeShare({ hashId, isOpen, onClose }: QRCodeShareProp
 
     // デスクトップ判定
     const checkDesktop = () => {
-      setIsDesktop(window.innerWidth >= 768);
+      setIsDesktop(window.innerWidth >= UI_CONSTANTS.DESKTOP_BREAKPOINT);
     };
 
     checkDesktop();
@@ -36,7 +37,7 @@ export default function QRCodeShare({ hashId, isOpen, onClose }: QRCodeShareProp
   // oaMessage形式: 直接メッセージを送信する
   const message = `Codename:${hashId}`;
   const encodedMessage = encodeURIComponent(message);
-  const qrUrl = `https://line.me/R/oaMessage/${botId}/?${encodedMessage}`;
+  const qrUrl = `${API_ENDPOINTS.LINE_OA_MESSAGE}/${botId}/?${encodedMessage}`;
 
   return (
     <div
@@ -49,7 +50,7 @@ export default function QRCodeShare({ hashId, isOpen, onClose }: QRCodeShareProp
       >
         {/* ヘッダー */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-white">スマホで開く</h2>
+          <h2 className="text-xl font-bold text-white">{MESSAGE_TEMPLATES.QR_SCAN_INSTRUCTION}</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition"
@@ -65,8 +66,8 @@ export default function QRCodeShare({ hashId, isOpen, onClose }: QRCodeShareProp
         <div className="bg-white p-6 rounded-lg mb-6 flex justify-center">
           <QRCodeSVG
             value={qrUrl}
-            size={256}
-            level="H"
+            size={UI_CONSTANTS.QR_CODE_SIZE_LARGE}
+            level={UI_CONSTANTS.QR_CODE_ERROR_CORRECTION_LEVEL}
             includeMargin={true}
           />
         </div>
@@ -86,7 +87,7 @@ export default function QRCodeShare({ hashId, isOpen, onClose }: QRCodeShareProp
           {/* LINE Bot情報 */}
           <div className="pt-4 border-t border-gray-700">
             <p className="text-xs text-gray-500">
-              「Boom!ヒーロー!!」Bot
+              「{MESSAGE_TEMPLATES.BRAND_NAME}」Bot
             </p>
             <p className="text-xs text-gray-600 mt-1">
               {botId}
