@@ -23,7 +23,6 @@ export default function SlideDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
-  const [showDebug, setShowDebug] = useState(false);
 
   useEffect(() => {
     async function loadImages() {
@@ -56,13 +55,6 @@ export default function SlideDetailPage() {
 
     loadImages();
   }, [fileId]);
-
-  // クライアントサイドでのみデバッグ表示を有効化
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      setShowDebug(true);
-    }
-  }, []);
 
   const goToPrevious = () => {
     if (currentIndex > 0) {
@@ -338,17 +330,6 @@ export default function SlideDetailPage() {
       <div className="fixed bottom-24 right-4 text-gray-400 text-xs hidden md:block">
         ← → to navigate · ESC to close
       </div>
-
-      {/* デバッグ情報 (開発環境のみ) */}
-      {showDebug && (
-        <div className="fixed top-20 right-4 bg-gray-900/90 text-white text-xs p-3 rounded max-w-xs z-50">
-          <div className="font-bold mb-2">LIFF Debug</div>
-          <div>isInClient: {isInClient ? '✅ Yes' : '❌ No'}</div>
-          <div>isLoggedIn: {isLoggedIn ? '✅ Yes' : '❌ No'}</div>
-          <div>isLiffReady: {isLiffReady ? '✅ Yes' : '❌ No'}</div>
-          {liffError && <div className="text-red-400 mt-2">Error: {liffError}</div>}
-        </div>
-      )}
 
       {/* QRコード常時表示（デスクトップのみ） */}
       <div className="hidden md:block fixed top-20 right-4 z-40">
