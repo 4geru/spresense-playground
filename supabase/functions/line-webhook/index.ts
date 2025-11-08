@@ -19,13 +19,11 @@ import {
   downloadImageContent,
   echoTextMessage,
   sendComicConversionResult,
-  sendConditionNotMetMessage,
   sendErrorMessage,
+  showLoadingAnimation,
 } from "./line.ts";
 
 import {
-  analyzePersonAndPose,
-  shouldConvertToComic,
   convertToComicStyle,
 } from "./gemini.ts";
 
@@ -111,8 +109,9 @@ async function processImageMessage(
   event: any,
   env: EnvVars
 ): Promise<void> {
-  const { replyToken, message } = event;
+  const { replyToken, message, source } = event;
   const messageId = message?.id;
+  const userId = source?.userId;
 
   if (!replyToken || !messageId) {
     console.error("❌ replyTokenまたはmessageIdが不足");
@@ -121,6 +120,11 @@ async function processImageMessage(
 
   try {
     const lineClient = createLineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
+
+    // Loading Animationを表示（1対1チャットのみ）
+    if (userId) {
+      await showLoadingAnimation(userId, env.LINE_CHANNEL_ACCESS_TOKEN, 60);
+    }
 
     // [1] 画像ダウンロード
     console.log("=".repeat(60));
@@ -159,57 +163,7 @@ async function processImageMessage(
 
     console.log(`✅ オリジナル画像保存完了: ${originalUrl}`);
 
-    // [3] Gemini AI分析（人・ポーズ判定）
-    console.log("\n" + "=".repeat(60));
-    console.log("🧠 AI画像分析フェーズ");
-    console.log("=".repeat(60));
-
-    let analysisResult;
-    try {
-      analysisResult = await analyzePersonAndPose(
-        imageData,
-        env.GEMINI_API_KEY,
-        mimeType
-      );
-    } catch (error: any) {
-      if (error?.isRateLimit) {
-        console.error("❌ AI分析失敗: レート制限");
-        await sendErrorMessage(lineClient, replyToken, "rate_limit");
-        return;
-      }
-      throw error;
-    }
-
-    if (!analysisResult) {
-      console.error("❌ AI分析失敗");
-      await sendErrorMessage(lineClient, replyToken);
-      return;
-    }
-
-    // [4] 条件判定
-    console.log("\n" + "=".repeat(60));
-    console.log("🎯 条件判定フェーズ");
-    console.log("=".repeat(60));
-
-    const convertNeeded = shouldConvertToComic(analysisResult);
-
-    if (!convertNeeded) {
-      // 条件不一致: 既にオリジナル画像は保存済みなので終了
-      console.log("⏭️ アメコミ風変換をスキップ");
-      console.log("📁 オリジナル画像は既に保存済み");
-
-      // 条件不一致メッセージを返信
-      await sendConditionNotMetMessage(
-        lineClient,
-        replyToken,
-        analysisResult.face_detected,
-        analysisResult.is_pose
-      );
-
-      return;
-    }
-
-    // [5] アメコミ風変換（条件マッチ時）
+    // [3] アメコミ風変換
     console.log("\n" + "=".repeat(60));
     console.log("🎨 アメコミ風変換フェーズ");
     console.log("=".repeat(60));
@@ -259,7 +213,7 @@ async function processImageMessage(
 
     console.log(`✅ アメコミ風画像保存完了: ${comicUrl}`);
 
-    // [7] LINE Reply APIで返信
+    // [4] LINE Reply APIで返信
     console.log("\n" + "=".repeat(60));
     console.log("📤 LINE Reply API 送信フェーズ");
     console.log("=".repeat(60));
@@ -267,8 +221,8 @@ async function processImageMessage(
     const replySuccess = await sendComicConversionResult(
       lineClient,
       replyToken,
-      originalUrl,
-      comicUrl
+      comicUrl,
+      originalUrl
     );
 
     if (replySuccess) {

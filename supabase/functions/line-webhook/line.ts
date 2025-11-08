@@ -154,6 +154,46 @@ export async function echoTextMessage(
 }
 
 /**
+ * LINE Loading Animationを表示
+ *
+ * @param userId - ユーザーID
+ * @param accessToken - LINEアクセストークン
+ * @param seconds - ローディング表示時間（5-60秒）
+ */
+export async function showLoadingAnimation(
+  userId: string,
+  accessToken: string,
+  seconds: number = 20
+): Promise<void> {
+  try {
+    console.log(`⏳ Loading Animation表示開始 (${seconds}秒)`);
+
+    const response = await fetch(
+      "https://api.line.me/v2/bot/chat/loading/start",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          chatId: userId,
+          loadingSeconds: Math.min(Math.max(seconds, 5), 60), // 5-60秒に制限
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`⚠️ Loading Animation失敗: ${response.status} ${response.statusText}`);
+    } else {
+      console.log("✅ Loading Animation表示成功");
+    }
+  } catch (error) {
+    console.error("⚠️ Loading Animation表示エラー:", error);
+  }
+}
+
+/**
  * 処理中メッセージを送信
  *
  * @param client - LINE Client
@@ -176,14 +216,14 @@ export async function sendProcessingMessage(
  *
  * @param client - LINE Client
  * @param replyToken - リプライトークン
- * @param originalUrl - オリジナル画像URL
- * @param comicUrl - アメコミ風画像URL
+ * @param comicUrl - アメコミ風画像URL（メイン表示）
+ * @param originalUrl - オリジナル画像URL（プレビュー表示）
  */
 export async function sendComicConversionResult(
   client: Client,
   replyToken: string,
-  originalUrl: string,
-  comicUrl: string
+  comicUrl: string,
+  originalUrl: string
 ): Promise<boolean> {
   try {
     const messages: Message[] = [
@@ -194,7 +234,7 @@ export async function sendComicConversionResult(
       } as ImageMessage,
       {
         type: "text",
-        text: "🦸 アメコミ風変換完了！\n✅ 人がいてポーズをしているのを検出しました！",
+        text: "🦸 アメコミ風変換完了！",
       } as TextMessage,
     ];
 
