@@ -251,9 +251,6 @@ ${MESSAGE_TEMPLATES.SAFETY_NOTICE}`;
           <Link href="/slides" className="hover:text-gray-300 transition text-sm">
             ← Back
           </Link>
-          <div className="text-sm">
-            {currentIndex + 1} / {images.length}
-          </div>
           <div className="flex items-center gap-2">
             {isLoggedIn && profile ? (
               <>
