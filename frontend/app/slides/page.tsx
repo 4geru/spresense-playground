@@ -61,7 +61,7 @@ export default function SlidesPage() {
             <div className="flex items-center gap-2">
               <Link
                 href="/"
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition hidden md:block"
               >
                 Slideshow
               </Link>
@@ -114,7 +114,7 @@ export default function SlidesPage() {
             <div className="flex items-center gap-2">
               <Link
                 href="/"
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition hidden md:block"
               >
                 Slideshow
               </Link>
@@ -169,7 +169,7 @@ export default function SlidesPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/"
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition"
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition hidden md:block"
             >
               Slideshow
             </Link>
