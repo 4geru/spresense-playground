@@ -20,7 +20,6 @@ export async function fetchImages(): Promise<ImageData[]> {
       'apikey': supabaseKey,
       'Content-Type': 'application/json'
     },
-    cache: 'no-store', // 常に最新データを取得
   });
 
   if (!response.ok) {
