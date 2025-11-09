@@ -49,6 +49,11 @@ export default function SlidesPage() {
     loadImages();
   }, []);
 
+  // ページタイトル設定
+  useEffect(() => {
+    document.title = 'ギャラリー - Boom!ヒーロー!!';
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white">

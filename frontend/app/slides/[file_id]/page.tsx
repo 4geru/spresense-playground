@@ -91,6 +91,15 @@ export default function SlideDetailPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, images, goToNext, goToPrevious, router]);
 
+  // ページタイトル設定
+  useEffect(() => {
+    if (currentImage) {
+      document.title = `${currentImage.name} - Boom!ヒーロー!!`;
+    } else {
+      document.title = 'Boom!ヒーロー!!';
+    }
+  }, [currentImage]);
+
   if (loading || !isLiffReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">

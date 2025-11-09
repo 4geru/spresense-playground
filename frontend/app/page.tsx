@@ -178,6 +178,11 @@ export default function SlideshowPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // ページタイトル設定
+  useEffect(() => {
+    document.title = 'スライドショー - Boom!ヒーロー!!';
+  }, []);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
