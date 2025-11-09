@@ -49,21 +49,13 @@ class ImageEditor:
         Returns:
             str: アメコミ風変換プロンプト
         """
-        return """Transform this image into American comic book style with the following specific elements:
+        return """This is a photo of a person posing. Transform it into a cool, American comic book style with a focus on the person.
 
-1. BOLD OUTLINES: Add thick, strong black outlines around all characters and objects to create the distinctive comic book look with visual impact and character presence.
-
-2. VIBRANT COLORS AND HIGH CONTRAST: Use bright, primary colors with high saturation and strong light-dark contrast. Adjust the photo's color tone to be brighter and more vivid. Express shadows clearly to emphasize three-dimensional effect.
-
-3. ACTION LINES AND SPEED LINES: Add concentration lines and speed lines in the background to express movement, emotion, and impact. This creates dynamism and energy throughout the entire image.
-
-4. ONOMATOPOEIA (SOUND EFFECTS): Place bold sound effect text like "POW!", "CHOMP!", "SLURP!", "ZZZ!" strategically. These visual sound effects should reinforce the visual information and instantly convey situations and emotions to viewers. Design the text in hand-drawn style with bold fonts following classic comic book typography.
-
-5. HALFTONE (DOT) EXPRESSION: Apply small dot (halftone) textures to backgrounds and shadow areas, which is a classic comic book expression born from printing technology constraints. This creates a retro comic book atmosphere.
-
-6. EXAGGERATED EMOTIONS: Make facial expressions more pronounced and expressive, incorporating the emotional exaggeration characteristic of comic book characters. Enlarge smiles and make expressions more dramatic.
-
-Combine these elements to not just process the photo, but to recreate the visual language and expression style specific to the American comic book genre."""
+- Emphasize the person with **bold, black outlines**.
+- Make the colors **vibrant and high-contrast**.
+- Add a powerful, stylish onomatopoeia (sound effect text) like "BOOM!" or "ZAP!" that matches the pose. The text should be the main visual effect.
+- **Do not add any new objects or complex backgrounds.** A simple halftone dot pattern is acceptable for shadows or the background.
+- The final result should look like a cool hero's introduction scene from a comic book."""
     
     def edit_image(self, image_path, edit_prompt, output_filename=None):
         """
