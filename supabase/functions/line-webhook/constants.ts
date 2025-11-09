@@ -53,6 +53,15 @@ export const MESSAGE_TEMPLATES = {
   ERROR_PROCESSING_FAILED: '❌ 処理中にエラーが発生しました。もう一度お試しください。',
   IMAGE_NOT_FOUND: (hashId: string) => `申し訳ありません。画像が見つかりませんでした。\n(ID: ${hashId})`,
   SLIDESHOW_DESCRIPTION: 'スライドショーで大きく表示できます',
+  WELCOME_TITLE: '🦸‍♂️💥 Boom!ヒーロー!!',
+  WELCOME_DESCRIPTION: 'あなたがポーズを決めると、その瞬間ヒーローに生まれ変わります！',
+  WELCOME_STEP1: '📸 写真を送信',
+  WELCOME_STEP1_DESC: '写真をこのBotに送信',
+  WELCOME_STEP2: '🤖 AI自動変換',
+  WELCOME_STEP2_DESC: 'Google Geminiが自動でアメコミ風に変換',
+  WELCOME_STEP3: '🎨 画像が届く',
+  WELCOME_STEP3_DESC: '変身した画像があなたのLINEに！',
+  WELCOME_FOOTER: '早速、ヒーローポーズの写真を送ろう！',
 } as const;
 
 // Timeout and Animation Durations

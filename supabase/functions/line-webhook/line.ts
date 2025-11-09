@@ -11,6 +11,7 @@ import {
   Client,
   WebhookEvent,
   MessageEvent,
+  FollowEvent,
   TextMessage,
   ImageMessage,
   validateSignature as lineValidateSignature,
@@ -87,6 +88,23 @@ export function findImageMessageEvent(
 }
 
 /**
+ * 友だち追加イベントを検出
+ *
+ * @param events - Webhookイベント配列
+ * @returns 友だち追加イベント（存在しない場合はnull）
+ */
+export function findFollowEvent(
+  events: WebhookEvent[]
+): FollowEvent | null {
+  for (const event of events) {
+    if (event.type === "follow") {
+      return event as FollowEvent;
+    }
+  }
+  return null;
+}
+
+/**
  * LINE APIから画像コンテンツをダウンロード
  *
  * @param messageId - メッセージID
@@ -96,7 +114,7 @@ export function findImageMessageEvent(
 export async function downloadImageContent(
   messageId: string,
   accessToken: string
-): Promise<{ data: string; mimeType: string } | null> {
+): Promise<{ data: string; mimeType: string } | null | '404'> {
   try {
     console.log(`📥 画像コンテンツをダウンロード中... (messageId: ${messageId})`);
 
@@ -109,6 +127,12 @@ export async function downloadImageContent(
         },
       }
     );
+
+    // 404エラー（画像共有など）の場合はスキップ
+    if (response.status === 404) {
+      console.log(`ℹ️ 画像が見つかりません (404) - スキップします`);
+      return '404';
+    }
 
     if (!response.ok) {
       console.error(`❌ 画像ダウンロード失敗: ${response.status} ${response.statusText}`);
@@ -467,6 +491,209 @@ export async function sendImageFlexMessage(
     return true;
   } catch (error) {
     console.error("❌ Flex Message送信エラー:", error);
+    return false;
+  }
+}
+
+/**
+ * ウェルカムメッセージをFlex Messageで送信（友だち追加時）
+ *
+ * @param client - LINE Client
+ * @param replyToken - リプライトークン
+ */
+export async function sendWelcomeMessage(
+  client: Client,
+  replyToken: string
+): Promise<boolean> {
+  try {
+    console.log(`📤 ウェルカムメッセージ送信中...`);
+
+    const flexMessage: FlexMessage = {
+      type: "flex",
+      altText: `ようこそ！${MESSAGE_TEMPLATES.BRAND_NAME}へ`,
+      contents: {
+        type: "bubble",
+        header: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: MESSAGE_TEMPLATES.WELCOME_TITLE,
+              weight: "bold",
+              size: "xl",
+              color: LINE_COLORS.GREEN_600,
+              wrap: true,
+            },
+          ],
+          backgroundColor: LINE_COLORS.DARK_BG,
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: MESSAGE_TEMPLATES.WELCOME_DESCRIPTION,
+              size: "sm",
+              color: LINE_COLORS.GRAY_400,
+              wrap: true,
+              margin: "md",
+            },
+            {
+              type: "separator",
+              margin: "xl",
+            },
+            {
+              type: "box",
+              layout: "vertical",
+              margin: "xl",
+              spacing: "md",
+              contents: [
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    {
+                      type: "text",
+                      text: "1",
+                      size: "xl",
+                      weight: "bold",
+                      color: LINE_COLORS.GREEN_600,
+                      flex: 0,
+                    },
+                    {
+                      type: "box",
+                      layout: "vertical",
+                      margin: "md",
+                      contents: [
+                        {
+                          type: "text",
+                          text: MESSAGE_TEMPLATES.WELCOME_STEP1,
+                          size: "md",
+                          weight: "bold",
+                          color: "#ffffff",
+                        },
+                        {
+                          type: "text",
+                          text: MESSAGE_TEMPLATES.WELCOME_STEP1_DESC,
+                          size: "xs",
+                          color: LINE_COLORS.GRAY_400,
+                          wrap: true,
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    {
+                      type: "text",
+                      text: "2",
+                      size: "xl",
+                      weight: "bold",
+                      color: LINE_COLORS.GREEN_600,
+                      flex: 0,
+                    },
+                    {
+                      type: "box",
+                      layout: "vertical",
+                      margin: "md",
+                      contents: [
+                        {
+                          type: "text",
+                          text: MESSAGE_TEMPLATES.WELCOME_STEP2,
+                          size: "md",
+                          weight: "bold",
+                          color: "#ffffff",
+                        },
+                        {
+                          type: "text",
+                          text: MESSAGE_TEMPLATES.WELCOME_STEP2_DESC,
+                          size: "xs",
+                          color: LINE_COLORS.GRAY_400,
+                          wrap: true,
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    {
+                      type: "text",
+                      text: "3",
+                      size: "xl",
+                      weight: "bold",
+                      color: LINE_COLORS.GREEN_600,
+                      flex: 0,
+                    },
+                    {
+                      type: "box",
+                      layout: "vertical",
+                      margin: "md",
+                      contents: [
+                        {
+                          type: "text",
+                          text: MESSAGE_TEMPLATES.WELCOME_STEP3,
+                          size: "md",
+                          weight: "bold",
+                          color: "#ffffff",
+                        },
+                        {
+                          type: "text",
+                          text: MESSAGE_TEMPLATES.WELCOME_STEP3_DESC,
+                          size: "xs",
+                          color: LINE_COLORS.GRAY_400,
+                          wrap: true,
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          backgroundColor: LINE_COLORS.DARK_BG,
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: MESSAGE_TEMPLATES.WELCOME_FOOTER,
+              size: "sm",
+              color: LINE_COLORS.GRAY_400,
+              wrap: true,
+              align: "center",
+            },
+          ],
+          backgroundColor: LINE_COLORS.DARK_BG,
+        },
+        styles: {
+          header: {
+            backgroundColor: LINE_COLORS.DARK_BG,
+          },
+          body: {
+            backgroundColor: LINE_COLORS.DARK_BG,
+          },
+          footer: {
+            backgroundColor: LINE_COLORS.DARK_BG,
+          },
+        },
+      },
+    };
+
+    await client.replyMessage(replyToken, flexMessage);
+    console.log("✅ ウェルカムメッセージ送信成功");
+    return true;
+  } catch (error) {
+    console.error("❌ ウェルカムメッセージ送信エラー:", error);
     return false;
   }
 }

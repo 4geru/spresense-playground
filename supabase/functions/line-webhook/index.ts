@@ -16,6 +16,7 @@ import {
   validateSignature,
   findTextMessageEvent,
   findImageMessageEvent,
+  findFollowEvent,
   downloadImageContent,
   echoTextMessage,
   sendEditingMessage,
@@ -23,6 +24,7 @@ import {
   sendErrorMessage,
   showLoadingAnimation,
   sendImageFlexMessage,
+  sendWelcomeMessage,
 } from "./line.ts";
 
 import {
@@ -84,6 +86,32 @@ function getEnvVars(): EnvVars | null {
 }
 
 /**
+ * 友だち追加イベント処理
+ */
+async function processFollowEvent(
+  event: any,
+  env: EnvVars
+): Promise<void> {
+  const { replyToken } = event;
+
+  if (!replyToken) {
+    console.error("❌ replyTokenが不足");
+    return;
+  }
+
+  try {
+    console.log("👋 友だち追加イベント受信");
+
+    const lineClient = createLineClient(env.LINE_CHANNEL_ACCESS_TOKEN);
+
+    // ウェルカムメッセージを送信
+    await sendWelcomeMessage(lineClient, replyToken);
+  } catch (error) {
+    console.error("❌ 友だち追加イベント処理エラー:", error);
+  }
+}
+
+/**
  * テキストメッセージ処理
  */
 async function processTextMessage(
@@ -142,8 +170,8 @@ async function processTextMessage(
         });
       }
     } else {
-      // その他のテキストメッセージはオウム返し
-      await echoTextMessage(lineClient, replyToken, text);
+      // その他のテキストメッセージは無視
+      console.log("ℹ️ サポート対象外のテキストメッセージ（無視）");
     }
   } catch (error) {
     console.error("❌ テキストメッセージ処理エラー:", error);
@@ -161,6 +189,12 @@ async function processImageMessage(
   const messageId = message?.id;
   const userId = source?.userId;
 
+  // メッセージタイプが画像であることを明示的に確認
+  if (message?.type !== "image") {
+    console.log("ℹ️ 画像メッセージではありません（スキップ）");
+    return;
+  }
+
   if (!replyToken || !messageId) {
     console.error("❌ replyTokenまたはmessageIdが不足");
     return;
@@ -175,6 +209,11 @@ async function processImageMessage(
     console.log("=".repeat(60));
 
     const imageContent = await downloadImageContent(messageId, env.LINE_CHANNEL_ACCESS_TOKEN);
+
+    if (imageContent == '404') {
+      console.log("ℹ️ 画像共有です（スキップ）");
+      return;
+    }
 
     if (!imageContent) {
       console.error("❌ 画像ダウンロード失敗");
@@ -363,6 +402,24 @@ serve(async (req: Request) => {
 
     // Webhookボディをパース
     const webhookBody: WebhookRequestBody = JSON.parse(body);
+
+    // 友だち追加イベントを検出
+    const followEvent = findFollowEvent(webhookBody.events);
+
+    if (followEvent) {
+      console.log("👋 友だち追加イベントを検出");
+
+      // 非同期で友だち追加イベント処理を実行
+      processFollowEvent(followEvent, env).catch((error) => {
+        console.error("❌ 友だち追加イベント処理エラー:", error);
+      });
+
+      // 即座に200 OKを返す
+      return new Response(JSON.stringify({ status: "processing_follow" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // テキストメッセージイベントを検出
     const textEvent = findTextMessageEvent(webhookBody.events);
