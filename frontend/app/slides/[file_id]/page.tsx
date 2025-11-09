@@ -296,7 +296,7 @@ ${MESSAGE_TEMPLATES.SAFETY_NOTICE}`;
       {currentIndex > 0 && (
         <button
           onClick={goToPrevious}
-          className="fixed left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-4 rounded-full transition"
+          className="fixed left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-4 rounded-full transition hidden md:block"
           aria-label="Previous image"
         >
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,7 +308,7 @@ ${MESSAGE_TEMPLATES.SAFETY_NOTICE}`;
       {currentIndex < images.length - 1 && (
         <button
           onClick={goToNext}
-          className="fixed right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-4 rounded-full transition"
+          className="fixed right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-4 rounded-full transition hidden md:block"
           aria-label="Next image"
         >
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
