@@ -20,6 +20,8 @@ import {
   TextEventMessage,
   FlexMessage,
   FlexBubble,
+  QuickReply,
+  QuickReplyItem,
 } from "npm:@line/bot-sdk@9.3.0";
 
 import {
@@ -28,6 +30,7 @@ import {
   LINE_STICKERS,
   MESSAGE_TEMPLATES,
   DURATIONS,
+  QUICK_REPLY,
 } from "./constants.ts";
 
 // LINE Client の初期化
@@ -284,7 +287,7 @@ export async function sendEditingMessage(
 }
 
 /**
- * アメコミ風変換画像をPush APIで送信
+ * アメコミ風変換画像をPush APIで送信（Quick Reply付き）
  *
  * @param client - LINE Client
  * @param userId - ユーザーID
@@ -296,6 +299,26 @@ export async function pushComicImage(
   comicUrl: string
 ): Promise<boolean> {
   try {
+    // Quick Reply設定
+    const quickReply: QuickReply = {
+      items: [
+        {
+          type: "action",
+          action: {
+            type: "camera",
+            label: QUICK_REPLY.CAMERA_LABEL,
+          },
+        },
+        {
+          type: "action",
+          action: {
+            type: "cameraRoll",
+            label: QUICK_REPLY.CAMERA_ROLL_LABEL,
+          },
+        },
+      ],
+    };
+
     const messages: Message[] = [
       {
         type: "image",
@@ -305,11 +328,12 @@ export async function pushComicImage(
       {
         type: "text",
         text: MESSAGE_TEMPLATES.COMIC_COMPLETE,
+        quickReply: quickReply,
       } as TextMessage,
     ];
 
     await client.pushMessage(userId, messages);
-    console.log("✅ アメコミ風変換画像送信成功");
+    console.log("✅ アメコミ風変換画像送信成功（Quick Reply付き）");
     return true;
   } catch (error) {
     console.error("❌ アメコミ風変換画像送信エラー:", error);

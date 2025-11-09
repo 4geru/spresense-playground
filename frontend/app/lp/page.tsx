@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
   const lineBotId = process.env.NEXT_PUBLIC_LINE_BOT_ID;
-  const lineAddFriendUrl = lineBotId ? `https://line.me/R/ti/p/@${lineBotId}` : '#';
+  const lineAddFriendUrl = lineBotId ? `https://line.me/R/ti/p/${lineBotId}` : '#';
 
   useEffect(() => {
     setMounted(true);

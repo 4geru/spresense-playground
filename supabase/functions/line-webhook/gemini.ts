@@ -17,21 +17,25 @@ export function createGeminiClient(apiKey: string) {
  * アメコミ風変換プロンプトを取得
  */
 export function getComicStylePrompt(): string {
-  return `Transform this image into American comic book style with the following specific elements:
+  return `Transform this photo into American comic book style while PRESERVING the original composition, pose, and subject matter.
 
-1. BOLD OUTLINES: Add thick, strong black outlines around all characters and objects to create the distinctive comic book look with visual impact and character presence.
+IMPORTANT: Keep the original elements - maintain the same people, their poses, positions, and the overall scene composition. DO NOT replace or drastically change the subjects.
 
-2. VIBRANT COLORS AND HIGH CONTRAST: Use bright, primary colors with high saturation and strong light-dark contrast. Adjust the photo's color tone to be brighter and more vivid. Express shadows clearly to emphasize three-dimensional effect.
+Apply the following comic book visual effects to enhance the original photo:
 
-3. ACTION LINES AND SPEED LINES: Add concentration lines and speed lines in the background to express movement, emotion, and impact. This creates dynamism and energy throughout the entire image.
+1. BOLD OUTLINES: Add thick, strong black outlines around the people and main objects while keeping their original shapes and positions intact.
 
-4. ONOMATOPOEIA (SOUND EFFECTS): Place bold sound effect text like "POW!", "CHOMP!", "SLURP!", "ZZZ!" strategically. These visual sound effects should reinforce the visual information and instantly convey situations and emotions to viewers. Design the text in hand-drawn style with bold fonts following classic comic book typography.
+2. VIBRANT COLORS WITH ORIGINAL TONES: Enhance the existing colors to be brighter and more saturated, but maintain the original color scheme. Increase contrast between light and shadow areas while preserving the photo's lighting direction.
 
-5. HALFTONE (DOT) EXPRESSION: Apply small dot (halftone) textures to backgrounds and shadow areas, which is a classic comic book expression born from printing technology constraints. This creates a retro comic book atmosphere.
+3. ACTION LINES (SUBTLE): Add subtle speed lines or concentration lines in the background only where appropriate to the pose or action. Don't overpower the main subject.
 
-6. EXAGGERATED EMOTIONS: Make facial expressions more pronounced and expressive, incorporating the emotional exaggeration characteristic of comic book characters. Enlarge smiles and make expressions more dramatic.
+4. ONOMATOPOEIA (OPTIONAL): If the pose clearly suggests action or emotion (like jumping, punching, celebrating), add one appropriate sound effect text like "POW!", "YEAH!", "BOOM!" in comic book style. Use sparingly and only when it fits naturally.
 
-Combine these elements to not just process the photo, but to recreate the visual language and expression style specific to the American comic book genre.`;
+5. HALFTONE DOTS (BACKGROUNDS): Apply subtle halftone dot patterns primarily to background areas and some shadow regions, maintaining the original scene structure.
+
+6. SLIGHT EXPRESSION ENHANCEMENT: Make facial expressions slightly more vivid while keeping them natural and recognizable as the original person.
+
+CRITICAL: The result should look like the original photo enhanced with comic book visual effects, NOT a completely different illustration. Preserve the identity, pose, and composition of the original subjects at all costs.`;
 }
 
 /**

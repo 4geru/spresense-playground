@@ -51,6 +51,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_SUPABASE_PROJECT_ID }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_LIFF_ID: ${{ secrets.NEXT_PUBLIC_LIFF_ID }}
+          NEXT_PUBLIC_LINE_BOT_ID: ${{ secrets.NEXT_PUBLIC_LINE_BOT_ID }}
         run: |
           echo "PROJECT_ID_IS_SET=$([ -n "$NEXT_PUBLIC_SUPABASE_PROJECT_ID" ] && echo "true" || echo "false")"
           echo "ANON_KEY_IS_SET=$([ -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && echo "true" || echo "false")"

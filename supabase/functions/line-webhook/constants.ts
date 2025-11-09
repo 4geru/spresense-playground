@@ -64,6 +64,12 @@ export const MESSAGE_TEMPLATES = {
   WELCOME_FOOTER: '早速、ヒーローポーズの写真を送ろう！',
 } as const;
 
+// Quick Reply Labels
+export const QUICK_REPLY = {
+  CAMERA_LABEL: '📸 カメラで撮影',
+  CAMERA_ROLL_LABEL: '🖼️ カメラロール',
+} as const;
+
 // Timeout and Animation Durations
 export const DURATIONS = {
   LOADING_ANIMATION_SECONDS: 60,
