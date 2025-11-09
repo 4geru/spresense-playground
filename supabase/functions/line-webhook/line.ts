@@ -31,6 +31,7 @@ import {
   MESSAGE_TEMPLATES,
   DURATIONS,
   QUICK_REPLY,
+  API_ENDPOINTS,
 } from "./constants.ts";
 
 // LINE Client の初期化
@@ -168,35 +169,6 @@ export async function downloadImageContent(
 }
 
 /**
- * テキストメッセージをオウム返し
- *
- * @param client - LINE Client
- * @param replyToken - リプライトークン
- * @param text - 受信したテキスト
- */
-export async function echoTextMessage(
-  client: Client,
-  replyToken: string,
-  text: string
-): Promise<boolean> {
-  try {
-    console.log(`🔄 テキストメッセージをオウム返し: "${text}"`);
-
-    const message: TextMessage = {
-      type: "text",
-      text: `オウム返し: ${text}`,
-    };
-
-    await client.replyMessage(replyToken, message);
-    console.log("✅ オウム返し送信成功");
-    return true;
-  } catch (error) {
-    console.error("❌ オウム返し送信エラー:", error);
-    return false;
-  }
-}
-
-/**
  * LINE Loading Animationを表示
  *
  * @param userId - ユーザーID
@@ -287,18 +259,35 @@ export async function sendEditingMessage(
 }
 
 /**
- * アメコミ風変換画像をPush APIで送信（Quick Reply付き）
+ * アメコミ風変換画像をPush APIで送信（FlexMessage付き）
  *
  * @param client - LINE Client
  * @param userId - ユーザーID
  * @param comicUrl - アメコミ風画像URL
+ * @param hashId - 画像のハッシュID
+ * @param liffUrl - LIFF アプリのURL（個別画像ページ、共有用）
+ * @param slidesUrl - LIFF アプリのURL（一覧ページ、スライドショーボタン用）
  */
 export async function pushComicImage(
   client: Client,
   userId: string,
-  comicUrl: string
+  comicUrl: string,
+  hashId: string,
+  liffUrl: string,
+  slidesUrl: string
 ): Promise<boolean> {
   try {
+    // 友達共有用のテキスト
+    const shareText = `🦸 ヒーロー写真が届いたよ！
+
+カッコよく変身した姿を見てみよう💥
+
+${liffUrl}
+${MESSAGE_TEMPLATES.SHARE_CALL_TO_ACTION}
+${MESSAGE_TEMPLATES.SAFETY_NOTICE}`;
+
+    const shareUrl = `${API_ENDPOINTS.LINE_SHARE}?text=${encodeURIComponent(shareText)}`;
+
     // Quick Reply設定
     const quickReply: QuickReply = {
       items: [
@@ -319,21 +308,111 @@ export async function pushComicImage(
       ],
     };
 
+    const flexMessage: FlexMessage = {
+      type: "flex",
+      altText: `🦸 ヒーロー参上！ - ${MESSAGE_TEMPLATES.BRAND_NAME}`,
+      contents: {
+        type: "bubble",
+        header: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: "🦸 ヒーロー参上！",
+              weight: "bold",
+              size: "xl",
+              color: LINE_COLORS.GREEN_600,
+              align: "center",
+            },
+          ],
+          backgroundColor: LINE_COLORS.DARK_BG,
+          paddingAll: "lg",
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          contents: [
+            {
+              type: "text",
+              text: MESSAGE_TEMPLATES.COMIC_COMPLETE,
+              size: "lg",
+              color: "#ffffff",
+              weight: "bold",
+              wrap: true,
+              align: "center",
+            },
+            {
+              type: "separator",
+              margin: "lg",
+            },
+            {
+              type: "text",
+              text: MESSAGE_TEMPLATES.SLIDESHOW_DESCRIPTION,
+              size: FLEX_MESSAGE.TEXT_SIZE_SM,
+              color: LINE_COLORS.GRAY_400,
+              margin: "lg",
+              wrap: true,
+              align: "center",
+            },
+          ],
+          backgroundColor: LINE_COLORS.DARK_BG,
+          paddingAll: "lg",
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          spacing: "sm",
+          contents: [
+            {
+              type: "button",
+              style: "primary",
+              action: {
+                type: "uri",
+                label: FLEX_MESSAGE.BUTTON_PRIMARY_LABEL,
+                uri: slidesUrl,
+              },
+              color: LINE_COLORS.GREEN_600,
+            },
+            {
+              type: "button",
+              style: "link",
+              action: {
+                type: "uri",
+                label: "友達に共有する",
+                uri: shareUrl,
+              },
+            },
+          ],
+          backgroundColor: LINE_COLORS.DARK_BG,
+          paddingAll: "lg",
+        },
+        styles: {
+          header: {
+            backgroundColor: LINE_COLORS.DARK_BG,
+          },
+          body: {
+            backgroundColor: LINE_COLORS.DARK_BG,
+          },
+          footer: {
+            backgroundColor: LINE_COLORS.DARK_BG,
+          },
+        },
+      },
+      quickReply: quickReply,
+    };
+
     const messages: Message[] = [
       {
         type: "image",
         originalContentUrl: comicUrl,
         previewImageUrl: comicUrl,
       } as ImageMessage,
-      {
-        type: "text",
-        text: MESSAGE_TEMPLATES.COMIC_COMPLETE,
-        quickReply: quickReply,
-      } as TextMessage,
+      flexMessage,
     ];
 
     await client.pushMessage(userId, messages);
-    console.log("✅ アメコミ風変換画像送信成功（Quick Reply付き）");
+    console.log("✅ アメコミ風変換画像+FlexMessage送信成功");
     return true;
   } catch (error) {
     console.error("❌ アメコミ風変換画像送信エラー:", error);
@@ -492,7 +571,7 @@ export async function sendImageFlexMessage(
               action: {
                 type: "uri",
                 label: FLEX_MESSAGE.BUTTON_PRIMARY_LABEL,
-                uri: liffUrl,
+                uri: slidesUrl,
               },
               color: LINE_COLORS.GREEN_600,
             },

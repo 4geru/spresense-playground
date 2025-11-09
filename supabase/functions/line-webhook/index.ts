@@ -18,7 +18,6 @@ import {
   findImageMessageEvent,
   findFollowEvent,
   downloadImageContent,
-  echoTextMessage,
   sendEditingMessage,
   pushComicImage,
   sendErrorMessage,
@@ -31,7 +30,7 @@ import {
   convertToComicStyle,
 } from "./gemini.ts";
 
-import { uploadImage, findImageByHashId } from "./storage.ts";
+import { uploadImage, findImageByHashId, generateHashId } from "./storage.ts";
 
 import { MESSAGE_TEMPLATES, DURATIONS } from "./constants.ts";
 
@@ -290,7 +289,7 @@ async function processImageMessage(
       'preview'
     );
 
-    const comicUrl = await uploadImage(
+    const uploadResult = await uploadImage(
       supabase,
       env.BUCKET_NAME,
       comicImageData,
@@ -298,7 +297,7 @@ async function processImageMessage(
       'original'
     );
 
-    if (!comicUrl) {
+    if (!uploadResult) {
       console.error("❌ アメコミ風画像のアップロード失敗");
       if (userId) {
         await lineClient.pushMessage(userId, {
@@ -309,9 +308,18 @@ async function processImageMessage(
       return;
     }
 
+    const comicUrl = uploadResult.url;
+    const fileName = uploadResult.fileName;
     console.log(`✅ アメコミ風画像保存完了: ${comicUrl}`);
 
-    // [7] LINE Push APIでアメコミ風画像のみ送信
+    // [7] hashIdを生成してLIFF URLを作成
+    const hashId = generateHashId(fileName);
+    const liffUrl = `https://liff.line.me/${env.LIFF_ID}/${hashId}`;
+    const slidesUrl = `https://liff.line.me/${env.LIFF_ID}/`;
+    console.log(`🔗 LIFF URL生成: ${liffUrl}`);
+    console.log(`🔗 Slides URL生成: ${slidesUrl}`);
+
+    // [8] LINE Push APIで画像とFlexMessageを送信
     console.log("\n" + "=".repeat(60));
     console.log("📤 LINE Push API 送信フェーズ");
     console.log("=".repeat(60));
@@ -321,15 +329,19 @@ async function processImageMessage(
       return;
     }
 
+    // 画像+FlexMessageを送信
     const pushSuccess = await pushComicImage(
       lineClient,
       userId,
-      comicUrl
+      comicUrl,
+      hashId,
+      liffUrl,
+      slidesUrl
     );
 
     if (pushSuccess) {
       console.log("\n" + "=".repeat(60));
-      console.log("🎉 処理完了: アメコミ風画像が送信されました！");
+      console.log("🎉 処理完了: 画像とFlexMessageが送信されました！");
       console.log("=".repeat(60));
     } else {
       console.error("❌ Push API送信失敗");

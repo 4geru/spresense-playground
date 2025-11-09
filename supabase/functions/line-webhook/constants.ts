@@ -53,6 +53,8 @@ export const MESSAGE_TEMPLATES = {
   ERROR_PROCESSING_FAILED: '❌ 処理中にエラーが発生しました。もう一度お試しください。',
   IMAGE_NOT_FOUND: (hashId: string) => `申し訳ありません。画像が見つかりませんでした。\n(ID: ${hashId})`,
   SLIDESHOW_DESCRIPTION: 'スライドショーで大きく表示できます',
+  SHARE_CALL_TO_ACTION: '👇 あなたも写真を送って、ヒーローに変身しよう！',
+  SAFETY_NOTICE: '⚠️ このBotは友達追加後に利用できます',
   WELCOME_TITLE: '🦸‍♂️💥 Boom!ヒーロー!!',
   WELCOME_DESCRIPTION: 'あなたがポーズを決めると、その瞬間ヒーローに生まれ変わります！',
   WELCOME_STEP1: '📸 写真を送信',

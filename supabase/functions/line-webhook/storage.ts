@@ -119,7 +119,7 @@ export async function findImageByHashId(
  * @param imageData - 画像データ（base64）
  * @param mimeType - MIMEタイプ
  * @param prefix - ファイル名プレフィックス（"original" or "comic"）
- * @returns アップロードされた画像の公開URL
+ * @returns アップロードされた画像の公開URLとファイル名
  */
 export async function uploadImage(
   supabase: SupabaseClient,
@@ -127,7 +127,7 @@ export async function uploadImage(
   imageData: string,
   mimeType: string,
   prefix: string
-): Promise<string | null> {
+): Promise<{ url: string; fileName: string } | null> {
   try {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const extension = getExtensionFromMimeType(mimeType);
@@ -161,7 +161,10 @@ export async function uploadImage(
     const publicUrl = urlData.publicUrl;
     console.log(`🔗 公開URL: ${publicUrl}`);
 
-    return publicUrl;
+    return {
+      url: publicUrl,
+      fileName: fileName,
+    };
   } catch (error) {
     console.error(`❌ アップロード処理エラー (${prefix}):`, error);
     return null;
